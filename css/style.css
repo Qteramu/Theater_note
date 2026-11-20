@@ -138,6 +138,7 @@ button { font: inherit; }
     border: 1px solid var(--line); border-radius: 18px;
     box-shadow: 0 8px 30px rgba(81,72,63,.13);
   }
+  .mobile-nav .nav-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; }
   .mobile-nav .nav-link { display: flex; flex-direction: column; gap: 3px; padding: 6px 2px; border-radius: 11px; font-size: .61rem; }
   .mobile-nav .nav-icon { font-size: 1rem; width: auto; }
   .calendar-grid { gap: 3px; }
