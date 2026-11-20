@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f5f1e9"><title>Show Edit | Theater Note</title><link rel="stylesheet" href="../css/style.css"><script defer src="../js/app.js"></script></head>
+<body data-page="show-edit"><div class="app-shell"><aside class="sidebar">
+<div class="brand"><div class="brand-kicker">MY PERSONAL THEATER PLANNER</div><div class="brand-name">Theater Note</div></div>
+<div class="nav-label">Menu</div><nav class="nav-list" aria-label="メインメニュー">
+<a class="nav-link" data-nav="home" href="../index.html"><span class="nav-icon">⌂</span><span>Home</span></a>
+<a class="nav-link" data-nav="calendar" href="calendar.html"><span class="nav-icon">▦</span><span>Calendar</span></a>
+<a class="nav-link" data-nav="performances" href="performances.html"><span class="nav-icon">♧</span><span>Shows</span></a>
+<a class="nav-link" data-nav="log" href="log.html"><span class="nav-icon">▤</span><span>Theater Log</span></a>
+<a class="nav-link" data-nav="settings" href="settings.html"><span class="nav-icon">⚙</span><span>Settings</span></a></nav></aside><main class="main"><header class="mobile-header"><div class="brand"><div class="brand-kicker">MY PERSONAL THEATER PLANNER</div><div class="brand-name">Theater Note</div></div></header><div class="page-wrap"><div class="page-heading"><div><div class="eyebrow">THEATER NOTE / SHOW EDIT</div><h1 id="editPageTitle">公演を登録</h1><p class="page-subtitle">公演情報と日程を入力します。</p></div><a class="btn" href="performances.html">一覧に戻る</a></div>
+<section class="card"><form id="performanceForm" class="form-grid"><input type="hidden" id="editingId">
+<label class="field"><span>公演名 *</span><input id="title" required maxlength="160" placeholder="例：エリオスR THE STAGE"></label>
+<label class="field"><span>会場</span><input id="venue" maxlength="160" placeholder="例：日本青年館ホール"></label>
+<div class="field full"><span>公演期間</span><div class="field-row"><input id="periodStart" type="date" aria-label="公演開始日"><span>〜</span><input id="periodEnd" type="date" aria-label="公演終了日"></div></div>
+<label class="field"><span>テーマカラー</span><input id="themeColor" type="color" value="#D8C5E8"></label>
+<label class="field"><span>追加イベント・特典（公演全体）</span><input id="generalEvents" placeholder="例：来場者特典、特別企画"></label>
+<label class="field full"><span>公演全体のメモ</span><textarea id="memo" rows="3" placeholder="出演者、記念日、注意事項など"></textarea></label>
+<div class="field full"><div class="subheading-row"><h3>公演日程</h3><button type="button" class="btn" id="addDateRow">＋ 日程を追加</button></div><div id="dateRows" class="date-rows"></div></div>
+<div class="field full form-actions"><button class="btn btn-primary" type="submit" id="savePerformance">公演を登録</button><button class="btn" type="button" id="cancelEdit">キャンセル</button></div></form><div id="message" class="notice" role="status" aria-live="polite" hidden></div></section><div class="footer-note">THEATER NOTE</div></div></main><nav class="mobile-nav" aria-label="メインメニュー"><div class="nav-list">
+<a class="nav-link" data-nav="home" href="../index.html"><span class="nav-icon">⌂</span><span>Home</span></a>
+<a class="nav-link" data-nav="calendar" href="calendar.html"><span class="nav-icon">▦</span><span>Calendar</span></a>
+<a class="nav-link" data-nav="performances" href="performances.html"><span class="nav-icon">♧</span><span>Shows</span></a>
+<a class="nav-link" data-nav="log" href="log.html"><span class="nav-icon">▤</span><span>Log</span></a>
+<a class="nav-link" data-nav="settings" href="settings.html"><span class="nav-icon">⚙</span><span>Settings</span></a></div></nav></div></body></html>

@@ -1,229 +1,105 @@
-// Theater Note - 共通処理と公演管理
+// Theater Note - 公演管理
 const STORAGE_KEY = "theaterNote.performances.v1";
-const STATUS_LABELS = { planned: "参加予定", attended: "参加済み", undecided: "未定", absent: "不参加" };
-
-function loadPerformances() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
-  catch { return []; }
+const STATUS_LABELS = { planned:"参加予定", attended:"参加済み", undecided:"未定", absent:"不参加" };
+function loadPerformances(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}catch{return []}}
+function savePerformances(items){localStorage.setItem(STORAGE_KEY,JSON.stringify(items))}
+function makeId(){return "p_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8)}
+function normalizePerformance(raw){
+ if(!raw||typeof raw!=="object"||Array.isArray(raw))throw new Error("公演データの形式が正しくありません。");
+ const title=String(raw.title||raw.name||"").trim(); if(!title)throw new Error("公演名がありません。");
+ const dates=Array.isArray(raw.dates)?raw.dates:(Array.isArray(raw.schedule)?raw.schedule:[]);
+ return {id:String(raw.id||makeId()),title,venue:String(raw.venue||raw.location||"").trim(),
+ periodStart:String(raw.periodStart||raw.startDate||"").slice(0,10),periodEnd:String(raw.periodEnd||raw.endDate||"").slice(0,10),
+ themeColor:/^#[0-9a-fA-F]{6}$/.test(raw.themeColor||raw.color||"")?(raw.themeColor||raw.color):"#D8C5E8",
+ generalEvents:String(raw.generalEvents||raw.events||"").trim(),memo:String(raw.memo||"").trim(),
+ dates:dates.map(d=>({id:String(d.id||makeId()),date:String(d.date||d.day||"").slice(0,10),startTime:String(d.startTime||d.time||"").slice(0,5),
+ events:String(d.events||d.event||"").trim(),status:Object.hasOwn(STATUS_LABELS,d.status)?d.status:"undecided",memo:String(d.memo||"").trim()})).filter(d=>d.date)};
 }
-function savePerformances(items) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function notice(msg,type="info"){const n=document.getElementById("message");if(n){n.hidden=false;n.className="notice "+type;n.textContent=msg}}
+function dateRowTemplate(d={}){
+ const row=document.createElement("div");row.className="date-row";
+ row.innerHTML=`<label class="field"><span>日付</span><input type="date" class="date-value" value="${esc(d.date||"")}"></label>
+ <label class="field"><span>開演</span><input type="time" class="time-value" value="${esc(d.startTime||"")}"></label>
+ <label class="field"><span>追加イベント</span><input class="event-value" value="${esc(d.events||"")}" placeholder="アフタートークなど"></label>
+ <label class="field"><span>参加状況</span><select class="status-value"><option value="undecided">未定</option><option value="planned">参加予定</option><option value="attended">参加済み</option><option value="absent">不参加</option></select></label>
+ <label class="field date-memo"><span>日別メモ</span><input class="memo-value" value="${esc(d.memo||"")}" placeholder="記念日・座席など"></label>
+ <button type="button" class="remove-date" aria-label="この日程を削除">×</button>`;
+ row.querySelector(".status-value").value=Object.hasOwn(STATUS_LABELS,d.status)?d.status:"undecided";
+ row.querySelector(".remove-date").addEventListener("click",()=>row.remove());return row;
 }
-function makeId() {
-  return "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+function collectForm(){
+ const dates=[...document.querySelectorAll("#dateRows .date-row")].map(r=>({id:makeId(),date:r.querySelector(".date-value").value,startTime:r.querySelector(".time-value").value,
+ events:r.querySelector(".event-value").value.trim(),status:r.querySelector(".status-value").value,memo:r.querySelector(".memo-value").value.trim()})).filter(d=>d.date);
+ return normalizePerformance({id:document.getElementById("editingId").value||makeId(),title:document.getElementById("title").value,venue:document.getElementById("venue").value,
+ periodStart:document.getElementById("periodStart").value,periodEnd:document.getElementById("periodEnd").value,themeColor:document.getElementById("themeColor").value,
+ generalEvents:document.getElementById("generalEvents").value,memo:document.getElementById("memo").value,dates});
 }
-function normalizePerformance(raw) {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("公演データの形式が正しくありません。");
-  const title = String(raw.title || raw.name || "").trim();
-  if (!title) throw new Error("公演名がありません。");
-  const dates = Array.isArray(raw.dates) ? raw.dates : (Array.isArray(raw.schedule) ? raw.schedule : []);
-  return {
-    id: String(raw.id || makeId()),
-    title,
-    venue: String(raw.venue || raw.location || "").trim(),
-    periodStart: String(raw.periodStart || raw.startDate || "").slice(0, 10),
-    periodEnd: String(raw.periodEnd || raw.endDate || "").slice(0, 10),
-    themeColor: /^#[0-9a-fA-F]{6}$/.test(raw.themeColor || raw.color || "") ? (raw.themeColor || raw.color) : "#D8C5E8",
-    generalEvents: String(raw.generalEvents || raw.events || "").trim(),
-    memo: String(raw.memo || "").trim(),
-    dates: dates.map(d => ({
-      id: String(d.id || makeId()),
-      date: String(d.date || d.day || "").slice(0, 10),
-      startTime: String(d.startTime || d.time || "").slice(0, 5),
-      events: String(d.events || d.event || "").trim(),
-      status: Object.hasOwn(STATUS_LABELS, d.status) ? d.status : "undecided",
-      memo: String(d.memo || "").trim()
-    })).filter(d => d.date)
-  };
+function fillForm(p){
+ document.getElementById("editingId").value=p?.id||"";
+ for(const key of ["title","venue","periodStart","periodEnd","themeColor","generalEvents","memo"])document.getElementById(key).value=p?.[key]??(key==="themeColor"?"#D8C5E8":"");
+ const holder=document.getElementById("dateRows");holder.replaceChildren();(p?.dates?.length?p.dates:[{}]).forEach(d=>holder.append(dateRowTemplate(d)));
+ document.getElementById("savePerformance").textContent=p?"変更を保存":"公演を登録";
+ document.getElementById("editPageTitle").textContent=p?"公演を編集":"公演を登録";
 }
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+function initEditPage(){
+ const form=document.getElementById("performanceForm");if(!form)return;
+ const id=new URLSearchParams(location.search).get("id");const existing=id?loadPerformances().find(p=>p.id===id):null;
+ if(id&&!existing){notice("公演情報が見つかりません。","error");return}
+ fillForm(existing);document.getElementById("addDateRow").addEventListener("click",()=>document.getElementById("dateRows").append(dateRowTemplate()));
+ document.getElementById("cancelEdit").addEventListener("click",()=>location.href=existing?`show-detail.html?id=${encodeURIComponent(existing.id)}`:"performances.html");
+ form.addEventListener("submit",e=>{e.preventDefault();try{
+ const candidate=collectForm();let items=loadPerformances();const duplicate=items.find(p=>p.id!==candidate.id&&p.title.toLowerCase()===candidate.title.toLowerCase()&&p.venue.toLowerCase()===candidate.venue.toLowerCase());
+ if(duplicate){notice("同じ公演名・会場の公演がすでにあります。別の公演として登録する場合は、公演名や会場を確認してください。","error");return}
+ if(existing&&!confirm("この公演情報を上書き保存しますか？"))return;
+ if(existing)items=items.map(p=>p.id===existing.id?candidate:p);else items.push(candidate);
+ savePerformances(items);location.href=`show-detail.html?id=${encodeURIComponent(candidate.id)}`;
+ }catch(err){notice(err.message,"error")}});
 }
-function setNotice(message, type = "info") {
-  const node = document.getElementById("message");
-  if (!node) return;
-  node.hidden = false; node.className = "notice " + type; node.textContent = message;
+function formatPeriod(p){if(p.periodStart&&p.periodEnd)return `${p.periodStart} ～ ${p.periodEnd}`;if(p.periodStart)return `${p.periodStart} ～`;if(p.periodEnd)return `～ ${p.periodEnd}`;const ds=p.dates.map(d=>d.date).sort();return ds.length?`${ds[0]} ～ ${ds[ds.length-1]}`:"期間未設定"}
+function initListPage(){
+ const list=document.getElementById("performanceList");if(!list)return;
+ function render(){
+ const items=loadPerformances();document.getElementById("performanceCount").textContent=`${items.length}件`;
+ if(!items.length){list.innerHTML='<div class="placeholder-note">まだ公演が登録されていません。</div>';return}
+ list.innerHTML=items.map(p=>`<a class="performance-card performance-card-link" href="show-detail.html?id=${encodeURIComponent(p.id)}">
+ <span class="performance-color" style="background:${esc(p.themeColor)}"></span><div class="performance-card-main">
+ <h3>${esc(p.title)}</h3><p>${esc(p.venue||"会場未設定")}</p><div class="performance-period">${esc(formatPeriod(p))}</div>
+ <div class="performance-card-foot"><span>${p.dates.length}公演</span><span>詳細を見る　›</span></div></div></a>`).join("");
+ }
+ render();
+ const toggle=document.getElementById("toggleImport"),panel=document.getElementById("importPanel");
+ toggle?.addEventListener("click",()=>{panel.hidden=!panel.hidden;toggle.textContent=panel.hidden?"開く":"閉じる"});
+ document.getElementById("previewJson")?.addEventListener("click",()=>{
+ const preview=document.getElementById("importPreview");try{
+ const parsed=JSON.parse(document.getElementById("jsonInput").value);const raws=Array.isArray(parsed)?parsed:(Array.isArray(parsed.performances)?parsed.performances:[parsed]);const candidates=raws.map(normalizePerformance);
+ if(!candidates.length)throw new Error("取り込める公演データがありません。");
+ preview.hidden=false;preview.innerHTML=`<h3>取り込み内容の確認（${candidates.length}件）</h3>`+candidates.map(p=>`<div class="preview-item"><strong>${esc(p.title)}</strong><span>${esc(p.venue||"会場未設定")} · ${p.dates.length}公演</span><small>${esc(formatPeriod(p))}</small></div>`).join("")+'<button type="button" class="btn btn-primary" id="confirmImport">この内容で取り込む</button>';
+ document.getElementById("confirmImport").addEventListener("click",()=>{let all=loadPerformances(),added=0,replaced=0,skipped=0;
+ for(const c of candidates){const dup=all.find(p=>p.id===c.id||(p.title.toLowerCase()===c.title.toLowerCase()&&p.venue.toLowerCase()===c.venue.toLowerCase()));
+ if(dup){const choice=prompt(`「${dup.title}」と同じ公演が登録済みです。\\n上書き／別名追加／スキップ のいずれかを入力してください。`,"スキップ");
+ if(choice==="上書き"){c.id=dup.id;all=all.map(p=>p.id===dup.id?c:p);replaced++}else if(choice==="別名追加"){c.id=makeId();all.push(c);added++}else skipped++;
+ }else{all.push(c);added++}}
+ savePerformances(all);render();notice(`取り込み完了：新規 ${added}件／上書き ${replaced}件／スキップ ${skipped}件`,"success");preview.hidden=true;
+ });
+ }catch(err){preview.hidden=true;notice("JSONを読み取れませんでした："+err.message,"error")}
+ });
 }
-function clearNotice() {
-  const node = document.getElementById("message");
-  if (node) { node.hidden = true; node.textContent = ""; }
+function initDetailPage(){
+ const root=document.getElementById("showDetail");if(!root)return;const id=new URLSearchParams(location.search).get("id");const p=loadPerformances().find(x=>x.id===id);
+ if(!p){root.innerHTML='<div class="placeholder-note">公演情報が見つかりません。公演一覧から選び直してください。</div>';return}
+ const dates=p.dates.slice().sort((a,b)=>(a.date+a.startTime).localeCompare(b.date+b.startTime));
+ const groups=dates.reduce((acc,d)=>{(acc[d.date]??=[]).push(d);return acc},{});
+ root.innerHTML=`<section class="card detail-card"><div class="detail-title-row"><span class="performance-color" style="background:${esc(p.themeColor)}"></span><div><h2>${esc(p.title)}</h2><p>${esc(p.venue||"会場未設定")}</p><div class="performance-period">${esc(formatPeriod(p))}</div></div></div>
+ <div class="detail-meta"><span>${dates.length}公演</span>${p.generalEvents?`<span>${esc(p.generalEvents)}</span>`:""}</div>
+ ${p.memo?`<div class="detail-memo"><strong>公演メモ</strong><p>${esc(p.memo).replace(/\\n/g,"<br>")}</p></div>`:""}
+ <div class="detail-actions"><a class="btn btn-primary" href="show-edit.html?id=${encodeURIComponent(p.id)}">編集する</a><button class="btn delete-detail" type="button">公演を削除</button></div></section>
+ <section class="card schedule-card"><h2 class="card-title">公演日程</h2><p class="help-text">日付をタップすると、その日の公演情報が開きます。</p>
+ ${Object.keys(groups).length?Object.entries(groups).map(([day,ds],i)=>`<details class="schedule-day" ${i===0?"":""}><summary><strong>${esc(day)}</strong><span>${ds.length}公演</span></summary><div class="schedule-day-content">${ds.map(d=>`<div class="schedule-item"><div class="schedule-time">${esc(d.startTime||"時間未定")}</div><div class="schedule-item-main"><strong>${esc(d.events||"通常公演")}</strong>${d.memo?`<p>${esc(d.memo)}</p>`:""}</div><span class="status status-${d.status==="attended"?"done":d.status==="planned"?"planned":d.status==="absent"?"no":"pending"}">${STATUS_LABELS[d.status]}</span></div>`).join("")}</div></details>`).join(""):'<div class="placeholder-note">公演日程はまだ登録されていません。</div>'}</section>`;
+ root.querySelector(".delete-detail").addEventListener("click",()=>{if(confirm(`「${p.title}」を削除しますか？この操作は取り消せません。`)){savePerformances(loadPerformances().filter(x=>x.id!==p.id));location.href="performances.html"}});
 }
-function dateRowTemplate(data = {}) {
-  const row = document.createElement("div");
-  row.className = "date-row";
-  row.innerHTML = `
-    <label class="field"><span>日付</span><input type="date" class="date-value" value="${escapeHtml(data.date || "")}"></label>
-    <label class="field"><span>開演</span><input type="time" class="time-value" value="${escapeHtml(data.startTime || "")}"></label>
-    <label class="field"><span>追加イベント</span><input class="event-value" value="${escapeHtml(data.events || "")}" placeholder="アフタートークなど"></label>
-    <label class="field"><span>参加状況</span><select class="status-value"><option value="undecided">未定</option><option value="planned">参加予定</option><option value="attended">参加済み</option><option value="absent">不参加</option></select></label>
-    <label class="field date-memo"><span>日別メモ</span><input class="memo-value" value="${escapeHtml(data.memo || "")}" placeholder="記念日・座席など"></label>
-    <button type="button" class="remove-date" aria-label="この日程を削除">×</button>`;
-  row.querySelector(".status-value").value = Object.hasOwn(STATUS_LABELS, data.status) ? data.status : "undecided";
-  row.querySelector(".remove-date").addEventListener("click", () => row.remove());
-  return row;
-}
-function collectManualForm() {
-  const dateRows = [...document.querySelectorAll("#dateRows .date-row")].map(row => ({
-    id: makeId(),
-    date: row.querySelector(".date-value").value,
-    startTime: row.querySelector(".time-value").value,
-    events: row.querySelector(".event-value").value.trim(),
-    status: row.querySelector(".status-value").value,
-    memo: row.querySelector(".memo-value").value.trim()
-  })).filter(d => d.date);
-  return normalizePerformance({
-    id: document.getElementById("editingId").value || makeId(),
-    title: document.getElementById("title").value,
-    venue: document.getElementById("venue").value,
-    periodStart: document.getElementById("periodStart").value,
-    periodEnd: document.getElementById("periodEnd").value,
-    themeColor: document.getElementById("themeColor").value,
-    generalEvents: document.getElementById("generalEvents").value,
-    memo: document.getElementById("memo").value,
-    dates: dateRows
-  });
-}
-function resetForm() {
-  document.getElementById("performanceForm").reset();
-  document.getElementById("editingId").value = "";
-  document.getElementById("themeColor").value = "#D8C5E8";
-  document.getElementById("dateRows").replaceChildren();
-  document.getElementById("savePerformance").textContent = "公演を登録";
-  document.getElementById("cancelEdit").hidden = true;
-}
-function editPerformance(id) {
-  const item = loadPerformances().find(p => p.id === id);
-  if (!item) return;
-  document.getElementById("editingId").value = item.id;
-  document.getElementById("title").value = item.title;
-  document.getElementById("venue").value = item.venue;
-  document.getElementById("periodStart").value = item.periodStart;
-  document.getElementById("periodEnd").value = item.periodEnd;
-  document.getElementById("themeColor").value = item.themeColor;
-  document.getElementById("generalEvents").value = item.generalEvents;
-  document.getElementById("memo").value = item.memo;
-  const holder = document.getElementById("dateRows"); holder.replaceChildren();
-  item.dates.forEach(d => holder.append(dateRowTemplate(d)));
-  document.getElementById("savePerformance").textContent = "変更を保存";
-  document.getElementById("cancelEdit").hidden = false;
-  document.getElementById("manualPanel").hidden = false;
-  document.getElementById("pastePanel").hidden = true;
-  document.querySelectorAll(".mode-tab").forEach(b => b.classList.toggle("active", b.dataset.mode === "manual"));
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-function renderPerformanceList() {
-  const list = document.getElementById("performanceList");
-  if (!list) return;
-  const items = loadPerformances();
-  document.getElementById("performanceCount").textContent = `${items.length}件`;
-  if (!items.length) { list.innerHTML = '<div class="placeholder-note">まだ公演が登録されていません。</div>'; return; }
-  list.innerHTML = items.map(p => `
-    <article class="performance-card">
-      <span class="performance-color" style="background:${escapeHtml(p.themeColor)}"></span>
-      <div class="performance-card-main">
-        <h3>${escapeHtml(p.title)}</h3>
-        <p>${escapeHtml(p.venue || "会場未設定")} · ${p.dates.length}公演日</p>
-        <div class="performance-date-summary">${p.dates.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(d => `${escapeHtml(d.date)} ${escapeHtml(d.startTime)} <span class="status status-${d.status === "attended" ? "done" : d.status === "planned" ? "planned" : d.status === "absent" ? "no" : "pending"}">${STATUS_LABELS[d.status]}</span>`).join("　")}</div>
-      </div>
-      <div class="performance-actions"><button class="btn edit-item" data-id="${escapeHtml(p.id)}">編集</button><button class="btn delete-item" data-id="${escapeHtml(p.id)}">削除</button></div>
-    </article>`).join("");
-  list.querySelectorAll(".edit-item").forEach(b => b.addEventListener("click", () => editPerformance(b.dataset.id)));
-  list.querySelectorAll(".delete-item").forEach(b => b.addEventListener("click", () => {
-    const item = loadPerformances().find(p => p.id === b.dataset.id);
-    if (!item) return;
-    if (!confirm(`「${item.title}」を削除しますか？\\nこの公演情報と公演日が削除されます。この操作は取り消せません。`)) return;
-    savePerformances(loadPerformances().filter(p => p.id !== item.id));
-    renderPerformanceList(); setNotice("公演を削除しました。", "success");
-  }));
-}
-function findDuplicate(candidate, items) {
-  return items.find(p => p.id === candidate.id ||
-    (p.title.trim().toLocaleLowerCase() === candidate.title.trim().toLocaleLowerCase() &&
-     p.venue.trim().toLocaleLowerCase() === candidate.venue.trim().toLocaleLowerCase()));
-}
-function importCandidates(candidates) {
-  let items = loadPerformances();
-  let added = 0, replaced = 0, skipped = 0;
-  for (const candidate of candidates) {
-    const duplicate = findDuplicate(candidate, items);
-    if (duplicate) {
-      const choice = prompt(
-        `同じ公演と思われるデータがあります。\\n\\n既存：${duplicate.title}（${duplicate.venue || "会場未設定"}）\\n取込：${candidate.title}（${candidate.venue || "会場未設定"}）\\n\\n上書きする場合は「上書き」、別公演として追加する場合は「別名追加」、変更しない場合は「スキップ」と入力してください。`,
-        "スキップ"
-      );
-      if (choice === "上書き") {
-        candidate.id = duplicate.id;
-        items = items.map(p => p.id === duplicate.id ? candidate : p);
-        replaced++;
-      } else if (choice === "別名追加") {
-        candidate.id = makeId(); items.push(candidate); added++;
-      } else { skipped++; }
-    } else { items.push(candidate); added++; }
-  }
-  savePerformances(items);
-  renderPerformanceList();
-  setNotice(`取り込み完了：新規 ${added}件／上書き ${replaced}件／スキップ ${skipped}件`, "success");
-}
-function initPerformancePage() {
-  if (!document.getElementById("performanceForm")) return;
-  const holder = document.getElementById("dateRows");
-  holder.append(dateRowTemplate());
-  document.getElementById("addDateRow").addEventListener("click", () => holder.append(dateRowTemplate()));
-  document.getElementById("cancelEdit").addEventListener("click", resetForm);
-  document.getElementById("performanceForm").addEventListener("submit", event => {
-    event.preventDefault(); clearNotice();
-    try {
-      const candidate = collectManualForm();
-      let items = loadPerformances();
-      const editingId = document.getElementById("editingId").value;
-      if (editingId) {
-        const existing = items.find(p => p.id === editingId);
-        if (existing && !confirm(`「${existing.title}」の内容を上書きしますか？\\n既存の公演情報・日程・メモが、今回の入力内容に置き換わります。`)) return;
-        items = items.map(p => p.id === editingId ? candidate : p);
-      } else {
-        const duplicate = findDuplicate(candidate, items);
-        if (duplicate) {
-          const overwrite = confirm(`同じ公演名・会場のデータが既にあります。\\n「${duplicate.title}」を上書きしますか？\\n\\nキャンセルを押すと登録を中止します。`);
-          if (!overwrite) return;
-          candidate.id = duplicate.id;
-          items = items.map(p => p.id === duplicate.id ? candidate : p);
-        } else items.push(candidate);
-      }
-      savePerformances(items); resetForm(); renderPerformanceList();
-      setNotice("公演情報を保存しました。", "success");
-    } catch (error) { setNotice(error.message, "error"); }
-  });
-  document.querySelectorAll(".mode-tab").forEach(button => button.addEventListener("click", () => {
-    const paste = button.dataset.mode === "paste";
-    document.getElementById("manualPanel").hidden = paste;
-    document.getElementById("pastePanel").hidden = !paste;
-    document.querySelectorAll(".mode-tab").forEach(b => b.classList.toggle("active", b === button));
-    clearNotice();
-  }));
-  document.getElementById("previewJson").addEventListener("click", () => {
-    clearNotice();
-    const preview = document.getElementById("importPreview");
-    try {
-      const parsed = JSON.parse(document.getElementById("jsonInput").value);
-      const rawItems = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.performances) ? parsed.performances : [parsed]);
-      const normalized = rawItems.map(normalizePerformance);
-      if (!normalized.length) throw new Error("取り込める公演データがありません。");
-      preview.hidden = false;
-      preview.innerHTML = `<h3>取り込み内容の確認（${normalized.length}件）</h3>` + normalized.map(p => `
-        <div class="preview-item"><strong>${escapeHtml(p.title)}</strong><span>${escapeHtml(p.venue || "会場未設定")} · ${p.dates.length}公演日</span>
-        <small>${p.dates.map(d => `${escapeHtml(d.date)} ${escapeHtml(d.startTime)} ${escapeHtml(d.events)}`).join("<br>") || "公演日未登録"}</small></div>`).join("") +
-        '<button type="button" class="btn btn-primary" id="confirmImport">この内容で取り込む</button>';
-      document.getElementById("confirmImport").addEventListener("click", () => importCandidates(normalized));
-    } catch (error) { preview.hidden = true; setNotice("JSONを読み取れませんでした：" + error.message, "error"); }
-  });
-  renderPerformanceList();
-}
-document.addEventListener("DOMContentLoaded", () => {
-  const currentPage = document.body.dataset.page || "home";
-  document.querySelectorAll(`[data-nav="${currentPage}"]`).forEach(link => {
-    link.classList.add("active"); link.setAttribute("aria-current", "page");
-  });
-  const dateNode = document.querySelector("[data-today]");
-  if (dateNode) dateNode.textContent = new Intl.DateTimeFormat("ja-JP", {year:"numeric",month:"long",day:"numeric",weekday:"short"}).format(new Date());
-  initPerformancePage();
+document.addEventListener("DOMContentLoaded",()=>{
+ const rawPage=document.body.dataset.page||"home";const pg=["show-edit","show-detail"].includes(rawPage)?"performances":rawPage;document.querySelectorAll(`[data-nav="${pg}"]`).forEach(a=>{a.classList.add("active");a.setAttribute("aria-current","page")});
+ const today=document.querySelector("[data-today]");if(today)today.textContent=new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric",weekday:"short"}).format(new Date());
+ initListPage();initEditPage();initDetailPage();
 });
