@@ -146,3 +146,59 @@ button { font: inherit; }
   .calendar-event { font-size: .55rem; padding: 2px 3px; }
   .date-chip { align-self: flex-start; }
 }
+
+
+/* Performance registration */
+[hidden] { display: none !important; }
+.mode-tabs { display:flex; gap:8px; border-bottom:1px solid var(--line); margin:-3px 0 22px; padding-bottom:13px; }
+.mode-tab { border:1px solid var(--line); border-radius:999px; padding:10px 16px; background:#fffdfa; color:var(--muted); cursor:pointer; font:inherit; font-size:.84rem; }
+.mode-tab.active { background:#e8efe9; border-color:#c5ddd0; color:#58745f; font-weight:700; }
+.form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.field { display:flex; flex-direction:column; gap:7px; min-width:0; color:var(--ink); font-size:.82rem; }
+.field > span { color:var(--muted); font-size:.76rem; }
+.field input:not([type=color]), .field select, .field textarea {
+  width:100%; min-width:0; border:1px solid var(--line); border-radius:11px; padding:11px 12px;
+  color:var(--ink); background:#fff; font:inherit; font-size:.86rem;
+}
+.field input[type=color] { width:58px; height:42px; border:1px solid var(--line); border-radius:10px; background:#fff; padding:4px; }
+.field textarea { resize:vertical; }
+.field.full { grid-column:1/-1; }
+.field-row { display:flex; align-items:center; gap:10px; }
+.field-row input { flex:1; }
+.subheading-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:8px 0 12px; }
+.subheading-row h3 { margin:0; font:500 1rem "Noto Serif JP",Georgia,serif; }
+.date-rows { display:grid; gap:10px; }
+.date-row { display:grid; grid-template-columns:1.1fr .8fr 1.3fr .9fr 1.2fr 34px; gap:8px; align-items:end; padding:12px; border:1px solid var(--line); border-radius:13px; background:#fcfaf6; }
+.date-row .field { font-size:.72rem; }
+.date-row .field input,.date-row .field select { padding:9px 8px; font-size:.76rem; }
+.remove-date { border:0; background:#f4e9e8; color:#a56f76; border-radius:9px; height:36px; cursor:pointer; font-size:1.2rem; }
+.form-actions { display:flex; gap:9px; align-items:center; flex-wrap:wrap; margin-top:4px; }
+.help-text { color:var(--muted); font-size:.84rem; margin:-5px 0 16px; }
+.import-preview { margin-top:18px; padding:16px; border:1px solid var(--line); border-radius:14px; background:#fcfaf6; }
+.import-preview h3 { margin:0 0 12px; font:500 1rem "Noto Serif JP",Georgia,serif; }
+.preview-item { display:grid; gap:3px; padding:10px 0; border-bottom:1px solid var(--line); }
+.preview-item span,.preview-item small { color:var(--muted); font-size:.78rem; }
+.import-preview .btn { margin-top:14px; }
+.notice { margin-top:16px; border-radius:12px; padding:12px 14px; font-size:.83rem; }
+.notice.success { background:#e8efe9; color:#42634b; }
+.notice.error { background:#f5e9e9; color:#965e65; }
+.performances-section { margin-top:28px; }
+.performance-list { display:grid; gap:12px; }
+.performance-card { display:flex; gap:14px; align-items:flex-start; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; box-shadow:var(--shadow); }
+.performance-color { width:8px; align-self:stretch; border-radius:8px; flex:0 0 8px; }
+.performance-card-main { flex:1; min-width:0; }
+.performance-card h3 { margin:0 0 3px; font:500 1.05rem "Noto Serif JP",Georgia,serif; }
+.performance-card p { margin:0 0 8px; color:var(--muted); font-size:.78rem; }
+.performance-date-summary { color:var(--muted); font-size:.75rem; line-height:2; }
+.performance-actions { display:flex; gap:6px; flex-wrap:wrap; }
+.performance-actions .btn { padding:7px 11px; font-size:.72rem; }
+@media(max-width:760px) {
+  .form-grid { grid-template-columns:1fr; }
+  .field.full { grid-column:auto; }
+  .date-row { grid-template-columns:1fr 1fr; }
+  .date-row .date-memo { grid-column:1/-1; }
+  .remove-date { grid-column:2; justify-self:end; width:38px; }
+  .performance-card { flex-wrap:wrap; }
+  .performance-actions { width:100%; padding-left:22px; }
+  .mode-tab { flex:1; padding:10px 8px; font-size:.76rem; }
+}

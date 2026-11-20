@@ -25,3 +25,15 @@
 ## デザイン調整
 - 個人用ツールとして、ブランドタグラインとトップページの装飾的なウェルカム文言を削除。
 - トップページの見出しを Welcome から Home に簡略化。
+
+
+## 公演管理（今回追加）
+- 手動フォームで公演情報と複数の日程を登録・編集・削除できます。
+- JSON貼り付けで1件または複数件の公演をプレビューして取り込めます。
+- 重複候補（同じ公演名・会場、または同じID）がある場合、上書き／別名追加／スキップを選べます。
+- 手動編集・削除にも確認を表示します。
+- データはこのブラウザの localStorage に保存されます。
+
+### JSON形式
+`title`, `venue`, `periodStart`, `periodEnd`, `themeColor`, `generalEvents`, `memo`, `dates` を使用します。
+`dates` は `date`, `startTime`, `events`, `status`（planned / attended / undecided / absent）, `memo` を持つ配列です。
