@@ -13,7 +13,7 @@ function normalizePerformance(raw){
  themeColor:/^#[0-9a-fA-F]{6}$/.test(raw.themeColor||raw.color||"")?(raw.themeColor||raw.color):"#D8C5E8",
  generalEvents:String(raw.generalEvents||raw.events||"").trim(),memo:String(raw.memo||"").trim(),
  dates:dates.map(d=>({id:String(d.id||makeId()),date:String(d.date||d.day||"").slice(0,10),startTime:String(d.startTime||d.time||"").slice(0,5),
- events:String(d.events||d.event||"").trim(),status:Object.hasOwn(STATUS_LABELS,d.status)?d.status:"undecided",memo:String(d.memo||"").trim()})).filter(d=>d.date)};
+ events:String(d.events||d.event||"").trim(),tags:Array.isArray(d.tags)?[...new Set(d.tags.map(t=>String(t).trim()).filter(Boolean))]:String(d.tags||"").split(/[、,，]/).map(t=>t.trim()).filter(Boolean),status:Object.hasOwn(STATUS_LABELS,d.status)?d.status:"undecided",memo:String(d.memo||"").trim()})).filter(d=>d.date)};
 }
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function notice(msg,type="info"){const n=document.getElementById("message");if(n){n.hidden=false;n.className="notice "+type;n.textContent=msg}}
@@ -22,7 +22,7 @@ function dateRowTemplate(d={}){
  row.innerHTML=`<label class="field"><span>日付</span><input type="date" class="date-value" value="${esc(d.date||"")}"></label>
  <label class="field"><span>開演</span><input type="time" class="time-value" value="${esc(d.startTime||"")}"></label>
  <label class="field"><span>追加イベント</span><input class="event-value" value="${esc(d.events||"")}" placeholder="アフタートークなど"></label>
- <label class="field"><span>参加状況</span><select class="status-value"><option value="undecided">未定</option><option value="planned">参加予定</option><option value="attended">参加済み</option><option value="absent">不参加</option></select></label>
+ <label class="field"><span>タグ（複数可・「,」区切り）</span><input class="tags-value" value="${esc((d.tags||[]).join(", "))}" placeholder="日替わりA, アフタートーク"></label>\n <label class="field"><span>参加状況</span><select class="status-value"><option value="undecided">未定</option><option value="planned">参加予定</option><option value="attended">参加済み</option><option value="absent">不参加</option></select></label>
  <label class="field date-memo"><span>日別メモ</span><input class="memo-value" value="${esc(d.memo||"")}" placeholder="記念日・座席など"></label>
  <button type="button" class="remove-date" aria-label="この日程を削除">×</button>`;
  row.querySelector(".status-value").value=Object.hasOwn(STATUS_LABELS,d.status)?d.status:"undecided";
@@ -30,7 +30,7 @@ function dateRowTemplate(d={}){
 }
 function collectForm(){
  const dates=[...document.querySelectorAll("#dateRows .date-row")].map(r=>({id:makeId(),date:r.querySelector(".date-value").value,startTime:r.querySelector(".time-value").value,
- events:r.querySelector(".event-value").value.trim(),status:r.querySelector(".status-value").value,memo:r.querySelector(".memo-value").value.trim()})).filter(d=>d.date);
+ events:r.querySelector(".event-value").value.trim(),tags:[...new Set(r.querySelector(".tags-value").value.split(/[、,，]/).map(t=>t.trim()).filter(Boolean))],status:r.querySelector(".status-value").value,memo:r.querySelector(".memo-value").value.trim()})).filter(d=>d.date);
  return normalizePerformance({id:document.getElementById("editingId").value||makeId(),title:document.getElementById("title").value,venue:document.getElementById("venue").value,
  periodStart:document.getElementById("periodStart").value,periodEnd:document.getElementById("periodEnd").value,themeColor:document.getElementById("themeColor").value,
  generalEvents:document.getElementById("generalEvents").value,memo:document.getElementById("memo").value,dates});
@@ -95,11 +95,58 @@ function initDetailPage(){
  ${p.memo?`<div class="detail-memo"><strong>公演メモ</strong><p>${esc(p.memo).replace(/\\n/g,"<br>")}</p></div>`:""}
  <div class="detail-actions"><a class="btn btn-primary" href="show-edit.html?id=${encodeURIComponent(p.id)}">編集する</a><button class="btn delete-detail" type="button">公演を削除</button></div></section>
  <section class="card schedule-card"><h2 class="card-title">公演日程</h2><p class="help-text">日付をタップすると、その日の公演情報が開きます。</p>
- ${Object.keys(groups).length?Object.entries(groups).map(([day,ds],i)=>`<details class="schedule-day" ${i===0?"":""}><summary><strong>${esc(day)}</strong><span>${ds.length}公演</span></summary><div class="schedule-day-content">${ds.map(d=>`<div class="schedule-item"><div class="schedule-time">${esc(d.startTime||"時間未定")}</div><div class="schedule-item-main"><strong>${esc(d.events||"通常公演")}</strong>${d.memo?`<p>${esc(d.memo)}</p>`:""}</div><span class="status status-${d.status==="attended"?"done":d.status==="planned"?"planned":d.status==="absent"?"no":"pending"}">${STATUS_LABELS[d.status]}</span></div>`).join("")}</div></details>`).join(""):'<div class="placeholder-note">公演日程はまだ登録されていません。</div>'}</section>`;
+ ${Object.keys(groups).length?Object.entries(groups).map(([day,ds],i)=>`<details class="schedule-day" ${i===0?"":""}><summary><strong>${esc(day)}</strong><span>${ds.length}公演</span></summary><div class="schedule-day-content">${ds.map(d=>`<div class="schedule-item"><div class="schedule-time">${esc(d.startTime||"時間未定")}</div><div class="schedule-item-main"><strong>${esc(d.events||"通常公演")}</strong>${d.tags?.length?`<div class="tag-list">${d.tags.map(t=>`<span class="show-tag">${esc(t)}</span>`).join("")}</div>`:""}${d.memo?`<p>${esc(d.memo)}</p>`:""}</div><span class="status status-${d.status==="attended"?"done":d.status==="planned"?"planned":d.status==="absent"?"no":"pending"}">${STATUS_LABELS[d.status]}</span></div>`).join("")}</div></details>`).join(""):'<div class="placeholder-note">公演日程はまだ登録されていません。</div>'}</section>`;
  root.querySelector(".delete-detail").addEventListener("click",()=>{if(confirm(`「${p.title}」を削除しますか？この操作は取り消せません。`)){savePerformances(loadPerformances().filter(x=>x.id!==p.id));location.href="performances.html"}});
 }
+
+function initCalendarPage(){
+ const grid=document.getElementById("calendarGrid");if(!grid)return;
+ const title=document.getElementById("calendarMonthTitle");
+ const empty=document.getElementById("calendarEmpty");
+ const today=new Date();let view=new Date(today.getFullYear(),today.getMonth(),1);
+ const weekdayNames=["日","月","火","水","木","金","土"];
+ function render(){
+  const year=view.getFullYear(),month=view.getMonth();
+  title.textContent=`${year}年${month+1}月`;
+  const all=loadPerformances();const byDate={};
+  for(const p of all)for(const d of (p.dates||[])){
+   if(!d.date)continue;(byDate[d.date]??=[]).push({performance:p,date:d});
+  }
+  const first=new Date(year,month,1),start=new Date(year,month,1-first.getDay());
+  const lastDay=new Date(year,month+1,0).getDate();
+  const cells=Math.ceil((first.getDay()+lastDay)/7)*7;
+  let monthHasEvent=false;grid.innerHTML="";
+  for(let i=0;i<cells;i++){
+   const day=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
+   const key=`${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,"0")}-${String(day.getDate()).padStart(2,"0")}`;
+   const entries=(byDate[key]||[]).sort((a,b)=>(a.date.startTime||"").localeCompare(b.date.startTime||""));
+   if(day.getMonth()===month&&entries.length)monthHasEvent=true;
+   const cell=document.createElement("div");cell.className="live-calendar-day"+(day.getMonth()!==month?" outside":"")+(day.toDateString()===today.toDateString()?" is-today":"");
+   const num=document.createElement("div");num.className="calendar-day-number";num.textContent=day.getDate();cell.append(num);
+   const eventWrap=document.createElement("div");eventWrap.className="calendar-day-events";
+   entries.forEach(({performance,date})=>{
+    const a=document.createElement("a");a.className="calendar-event-link";a.href=`show-detail.html?id=${encodeURIComponent(performance.id)}`;
+    a.style.setProperty("--event-color",performance.themeColor||"#b8c8b9");
+    const time=date.startTime?`${date.startTime} `:"";
+    a.innerHTML=`<span class="calendar-event-main">${esc(time+performance.title)}</span>${date.tags?.length?`<span class="calendar-event-tags">${date.tags.slice(0,2).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}`;
+    a.title=`${time}${performance.title}${date.events?"｜"+date.events:""}`;
+    eventWrap.append(a);
+   });
+   cell.append(eventWrap);grid.append(cell);
+  }
+  empty.hidden=monthHasEvent;
+ }
+ document.getElementById("prevMonth").addEventListener("click",()=>{view=new Date(view.getFullYear(),view.getMonth()-1,1);render()});
+ document.getElementById("nextMonth").addEventListener("click",()=>{view=new Date(view.getFullYear(),view.getMonth()+1,1);render()});
+ document.getElementById("todayMonth").addEventListener("click",()=>{view=new Date(today.getFullYear(),today.getMonth(),1);render()});
+ // 登録データの最初の公演月を初期表示。予定がなければ今月を表示。
+ const dates=loadPerformances().flatMap(p=>(p.dates||[]).map(d=>d.date).filter(Boolean)).sort();
+ if(dates.length){const [y,m]=dates[0].split("-").map(Number);view=new Date(y,m-1,1)}
+ render();
+}
+
 document.addEventListener("DOMContentLoaded",()=>{
  const rawPage=document.body.dataset.page||"home";const pg=["show-edit","show-detail"].includes(rawPage)?"performances":rawPage;document.querySelectorAll(`[data-nav="${pg}"]`).forEach(a=>{a.classList.add("active");a.setAttribute("aria-current","page")});
  const today=document.querySelector("[data-today]");if(today)today.textContent=new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric",weekday:"short"}).format(new Date());
- initListPage();initEditPage();initDetailPage();
+ initListPage();initEditPage();initDetailPage();initCalendarPage();
 });

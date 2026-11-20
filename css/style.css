@@ -242,3 +242,52 @@ button { font: inherit; }
  .schedule-item { align-items:flex-start; flex-wrap:wrap; gap:8px; }
  .schedule-item .status { margin-left:auto; }
 }
+
+
+/* Dynamic monthly calendar */
+.live-calendar-card { padding:clamp(12px,2.4vw,24px); }
+.calendar-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+.calendar-month-title { flex:1; text-align:center; font-family:Georgia,"Noto Serif JP",serif; font-size:1.25rem; font-weight:600; color:var(--ink); }
+.calendar-step { min-width:38px; padding:7px 12px; font-size:1.25rem; line-height:1; }
+.calendar-today { padding:8px 13px; font-size:.78rem; }
+.calendar-weekdays,.live-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+.calendar-weekdays { text-align:center; color:var(--muted); font-size:.76rem; padding-bottom:8px; }
+.calendar-weekdays span:first-child { color:#b47b80; }
+.calendar-weekdays span:last-child { color:#6c83b2; }
+.live-calendar-day { min-width:0; min-height:112px; border-top:1px solid var(--line); border-right:1px solid var(--line); padding:7px 5px; background:#fffefa; }
+.live-calendar-day:nth-child(7n+1) { border-left:1px solid var(--line); }
+.live-calendar-day.outside { background:#f7f5f0; }
+.live-calendar-day.outside .calendar-day-number { color:#c5c0b7; }
+.calendar-day-number { width:25px; height:25px; display:grid; place-items:center; border-radius:50%; font-size:.8rem; color:var(--ink); margin-bottom:5px; }
+.live-calendar-day.is-today .calendar-day-number { background:var(--sage); color:white; font-weight:700; }
+.calendar-day-events { display:flex; flex-direction:column; gap:4px; }
+.calendar-event-link { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:4px 5px; border-left:3px solid var(--event-color,#b8c8b9); border-radius:4px; background:#f5f1e9; color:var(--ink); text-decoration:none; font-size:.68rem; line-height:1.35; }
+.calendar-event-link:hover { background:#ebe6dc; }
+.calendar-legend { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:13px; color:var(--muted); font-size:.72rem; }
+.legend-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--sage); margin-right:5px; }
+@media(max-width:760px) {
+ .calendar-toolbar { gap:6px; }
+ .calendar-month-title { font-size:1.05rem; }
+ .calendar-step { min-width:32px; padding:6px 9px; }
+ .calendar-today { padding:7px 9px; }
+ .live-calendar-day { min-height:88px; padding:5px 3px; }
+ .calendar-day-number { width:22px; height:22px; font-size:.72rem; margin-bottom:4px; }
+ .calendar-event-link { font-size:.58rem; padding:3px 3px; border-left-width:2px; }
+ .calendar-legend { font-size:.66rem; }
+}
+@media(max-width:390px) {
+ .live-calendar-day { min-height:76px; }
+ .calendar-event-link { font-size:.53rem; }
+}
+
+/* Per-performance-slot tags */
+.date-row .tags-value { width:100%; }
+.tag-list { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
+.show-tag { display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; background:#eee9f5; color:#66557d; font-size:.7rem; line-height:1.35; }
+.calendar-event-link { white-space:normal; }
+.calendar-event-main { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.calendar-event-tags { display:flex; gap:3px; overflow:hidden; margin-top:3px; }
+.calendar-event-tags i { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:1px 4px; border-radius:4px; background:#fffefa; color:#655b6f; font-size:.55rem; font-style:normal; line-height:1.35; }
+@media(max-width:760px) {
+ .calendar-event-tags i { font-size:.48rem; padding:1px 2px; }
+}
