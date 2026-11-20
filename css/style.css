@@ -291,3 +291,16 @@ button { font: inherit; }
 @media(max-width:760px) {
  .calendar-event-tags i { font-size:.48rem; padding:1px 2px; }
 }
+
+/* Shared tap-to-select tag list */
+.tag-picker-field { min-width:0; }
+.tag-picker { display:flex; flex-wrap:wrap; gap:7px; padding:10px; border:1px solid var(--line); border-radius:12px; background:#fcfaf6; }
+.tag-choice { appearance:none; border:1px solid #ddd5e8; border-radius:999px; background:#fff; color:#6a6072; padding:7px 11px; font:inherit; font-size:.76rem; cursor:pointer; }
+.tag-choice.selected { background:#e9e2f2; border-color:#9c87b8; color:#55436e; box-shadow:inset 0 0 0 1px #9c87b8; }
+.tag-choice.selected::before { content:"✓ "; }
+.tag-create { display:flex; gap:7px; margin-top:8px; }
+.tag-create input { flex:1; min-width:0; }
+@media(max-width:760px) {
+ .tag-picker { gap:6px; padding:8px; }
+ .tag-choice { padding:7px 9px; font-size:.72rem; }
+}

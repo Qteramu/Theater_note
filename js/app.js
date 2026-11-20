@@ -1,6 +1,15 @@
 // Theater Note - 公演管理
 const STORAGE_KEY = "theaterNote.performances.v1";
 const STATUS_LABELS = { planned:"参加予定", attended:"参加済み", undecided:"未定", absent:"不参加" };
+const TAGS_KEY = "theaterNote.tags.v1";
+const DEFAULT_TAGS = ["日替わりA","日替わりB","日替わりC","日替わりD","日替わりE","初日","東京千秋楽","大千秋楽","シャッフルトーク","アフタートーク","お見送り会","カーテンコール撮影会","ライブパート全力応援回"];
+function loadTagCatalog(){
+ let saved=[];try{saved=JSON.parse(localStorage.getItem(TAGS_KEY)||"[]")}catch{}
+ const fromShows=loadPerformances().flatMap(p=>(p.dates||[]).flatMap(d=>d.tags||[]));
+ return [...new Set([...DEFAULT_TAGS,...saved,...fromShows].map(t=>String(t).trim()).filter(Boolean))];
+}
+function saveTagCatalog(tags){localStorage.setItem(TAGS_KEY,JSON.stringify([...new Set(tags.map(t=>t.trim()).filter(Boolean))]));}
+
 function loadPerformances(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}catch{return []}}
 function savePerformances(items){localStorage.setItem(STORAGE_KEY,JSON.stringify(items))}
 function makeId(){return "p_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8)}
@@ -13,7 +22,7 @@ function normalizePerformance(raw){
  themeColor:/^#[0-9a-fA-F]{6}$/.test(raw.themeColor||raw.color||"")?(raw.themeColor||raw.color):"#D8C5E8",
  generalEvents:String(raw.generalEvents||raw.events||"").trim(),memo:String(raw.memo||"").trim(),
  dates:dates.map(d=>({id:String(d.id||makeId()),date:String(d.date||d.day||"").slice(0,10),startTime:String(d.startTime||d.time||"").slice(0,5),
- events:String(d.events||d.event||"").trim(),tags:Array.isArray(d.tags)?[...new Set(d.tags.map(t=>String(t).trim()).filter(Boolean))]:String(d.tags||"").split(/[、,，]/).map(t=>t.trim()).filter(Boolean),status:Object.hasOwn(STATUS_LABELS,d.status)?d.status:"undecided",memo:String(d.memo||"").trim()})).filter(d=>d.date)};
+ tags:Array.isArray(d.tags)?[...new Set(d.tags.map(t=>String(t).trim()).filter(Boolean))]:String(d.tags||"").split(/[、,，]/).map(t=>t.trim()).filter(Boolean),status:Object.hasOwn(STATUS_LABELS,d.status)?d.status:"undecided",memo:String(d.memo||"").trim()})).filter(d=>d.date)};
 }
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function notice(msg,type="info"){const n=document.getElementById("message");if(n){n.hidden=false;n.className="notice "+type;n.textContent=msg}}
@@ -21,23 +30,44 @@ function dateRowTemplate(d={}){
  const row=document.createElement("div");row.className="date-row";
  row.innerHTML=`<label class="field"><span>日付</span><input type="date" class="date-value" value="${esc(d.date||"")}"></label>
  <label class="field"><span>開演</span><input type="time" class="time-value" value="${esc(d.startTime||"")}"></label>
- <label class="field"><span>追加イベント</span><input class="event-value" value="${esc(d.events||"")}" placeholder="アフタートークなど"></label>
- <label class="field"><span>タグ（複数可・「,」区切り）</span><input class="tags-value" value="${esc((d.tags||[]).join(", "))}" placeholder="日替わりA, アフタートーク"></label>\n <label class="field"><span>参加状況</span><select class="status-value"><option value="undecided">未定</option><option value="planned">参加予定</option><option value="attended">参加済み</option><option value="absent">不参加</option></select></label>
+ <div class="field full tag-picker-field"><span>タグ（タップして選択・複数可）</span><div class="tag-picker"></div>
+ <div class="tag-create"><input class="new-tag-value" placeholder="新しいタグを追加"><button type="button" class="btn add-tag">追加</button></div></div>
+ <label class="field"><span>参加状況</span><select class="status-value"><option value="undecided">未定</option><option value="planned">参加予定</option><option value="attended">参加済み</option><option value="absent">不参加</option></select></label>
  <label class="field date-memo"><span>日別メモ</span><input class="memo-value" value="${esc(d.memo||"")}" placeholder="記念日・座席など"></label>
  <button type="button" class="remove-date" aria-label="この日程を削除">×</button>`;
+ row.dataset.selectedTags=JSON.stringify(Array.isArray(d.tags)?d.tags:[]);
+ const picker=row.querySelector(".tag-picker");
+ function drawTags(){
+  const selected=JSON.parse(row.dataset.selectedTags||"[]");
+  picker.innerHTML="";
+  loadTagCatalog().forEach(tag=>{
+   const b=document.createElement("button");b.type="button";b.className="tag-choice"+(selected.includes(tag)?" selected":"");b.textContent=tag;
+   b.setAttribute("aria-pressed",selected.includes(tag)?"true":"false");
+   b.addEventListener("click",()=>{const current=JSON.parse(row.dataset.selectedTags||"[]");row.dataset.selectedTags=JSON.stringify(current.includes(tag)?current.filter(t=>t!==tag):[...current,tag]);drawTags()});
+   picker.append(b);
+  });
+ }
+ drawTags();
+ row.querySelector(".add-tag").addEventListener("click",()=>{
+  const input=row.querySelector(".new-tag-value"),tag=input.value.trim();if(!tag)return;
+  saveTagCatalog([...loadTagCatalog(),tag]);
+  const selected=JSON.parse(row.dataset.selectedTags||"[]");if(!selected.includes(tag))selected.push(tag);row.dataset.selectedTags=JSON.stringify(selected);
+  input.value="";drawTags();
+ });
+ row.querySelector(".new-tag-value").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();row.querySelector(".add-tag").click()}});
  row.querySelector(".status-value").value=Object.hasOwn(STATUS_LABELS,d.status)?d.status:"undecided";
  row.querySelector(".remove-date").addEventListener("click",()=>row.remove());return row;
 }
 function collectForm(){
  const dates=[...document.querySelectorAll("#dateRows .date-row")].map(r=>({id:makeId(),date:r.querySelector(".date-value").value,startTime:r.querySelector(".time-value").value,
- events:r.querySelector(".event-value").value.trim(),tags:[...new Set(r.querySelector(".tags-value").value.split(/[、,，]/).map(t=>t.trim()).filter(Boolean))],status:r.querySelector(".status-value").value,memo:r.querySelector(".memo-value").value.trim()})).filter(d=>d.date);
+ tags:JSON.parse(r.dataset.selectedTags||"[]"),status:r.querySelector(".status-value").value,memo:r.querySelector(".memo-value").value.trim()})).filter(d=>d.date);
  return normalizePerformance({id:document.getElementById("editingId").value||makeId(),title:document.getElementById("title").value,venue:document.getElementById("venue").value,
  periodStart:document.getElementById("periodStart").value,periodEnd:document.getElementById("periodEnd").value,themeColor:document.getElementById("themeColor").value,
  generalEvents:document.getElementById("generalEvents").value,memo:document.getElementById("memo").value,dates});
 }
 function fillForm(p){
  document.getElementById("editingId").value=p?.id||"";
- for(const key of ["title","venue","periodStart","periodEnd","themeColor","generalEvents","memo"])document.getElementById(key).value=p?.[key]??(key==="themeColor"?"#D8C5E8":"");
+ for(const key of ["title","venue","periodStart","periodEnd","themeColor","memo"])document.getElementById(key).value=p?.[key]??(key==="themeColor"?"#D8C5E8":"");
  const holder=document.getElementById("dateRows");holder.replaceChildren();(p?.dates?.length?p.dates:[{}]).forEach(d=>holder.append(dateRowTemplate(d)));
  document.getElementById("savePerformance").textContent=p?"変更を保存":"公演を登録";
  document.getElementById("editPageTitle").textContent=p?"公演を編集":"公演を登録";
@@ -91,11 +121,11 @@ function initDetailPage(){
  const dates=p.dates.slice().sort((a,b)=>(a.date+a.startTime).localeCompare(b.date+b.startTime));
  const groups=dates.reduce((acc,d)=>{(acc[d.date]??=[]).push(d);return acc},{});
  root.innerHTML=`<section class="card detail-card"><div class="detail-title-row"><span class="performance-color" style="background:${esc(p.themeColor)}"></span><div><h2>${esc(p.title)}</h2><p>${esc(p.venue||"会場未設定")}</p><div class="performance-period">${esc(formatPeriod(p))}</div></div></div>
- <div class="detail-meta"><span>${dates.length}公演</span>${p.generalEvents?`<span>${esc(p.generalEvents)}</span>`:""}</div>
+ <div class="detail-meta"><span>${dates.length}公演</span></div>
  ${p.memo?`<div class="detail-memo"><strong>公演メモ</strong><p>${esc(p.memo).replace(/\\n/g,"<br>")}</p></div>`:""}
  <div class="detail-actions"><a class="btn btn-primary" href="show-edit.html?id=${encodeURIComponent(p.id)}">編集する</a><button class="btn delete-detail" type="button">公演を削除</button></div></section>
  <section class="card schedule-card"><h2 class="card-title">公演日程</h2><p class="help-text">日付をタップすると、その日の公演情報が開きます。</p>
- ${Object.keys(groups).length?Object.entries(groups).map(([day,ds],i)=>`<details class="schedule-day" ${i===0?"":""}><summary><strong>${esc(day)}</strong><span>${ds.length}公演</span></summary><div class="schedule-day-content">${ds.map(d=>`<div class="schedule-item"><div class="schedule-time">${esc(d.startTime||"時間未定")}</div><div class="schedule-item-main"><strong>${esc(d.events||"通常公演")}</strong>${d.tags?.length?`<div class="tag-list">${d.tags.map(t=>`<span class="show-tag">${esc(t)}</span>`).join("")}</div>`:""}${d.memo?`<p>${esc(d.memo)}</p>`:""}</div><span class="status status-${d.status==="attended"?"done":d.status==="planned"?"planned":d.status==="absent"?"no":"pending"}">${STATUS_LABELS[d.status]}</span></div>`).join("")}</div></details>`).join(""):'<div class="placeholder-note">公演日程はまだ登録されていません。</div>'}</section>`;
+ ${Object.keys(groups).length?Object.entries(groups).map(([day,ds],i)=>`<details class="schedule-day" ${i===0?"":""}><summary><strong>${esc(day)}</strong><span>${ds.length}公演</span></summary><div class="schedule-day-content">${ds.map(d=>`<div class="schedule-item"><div class="schedule-time">${esc(d.startTime||"時間未定")}</div><div class="schedule-item-main"><strong>${esc(d.tags?.[0]||"公演")}</strong>${d.tags?.length?`<div class="tag-list">${d.tags.map(t=>`<span class="show-tag">${esc(t)}</span>`).join("")}</div>`:""}${d.memo?`<p>${esc(d.memo)}</p>`:""}</div><span class="status status-${d.status==="attended"?"done":d.status==="planned"?"planned":d.status==="absent"?"no":"pending"}">${STATUS_LABELS[d.status]}</span></div>`).join("")}</div></details>`).join(""):'<div class="placeholder-note">公演日程はまだ登録されていません。</div>'}</section>`;
  root.querySelector(".delete-detail").addEventListener("click",()=>{if(confirm(`「${p.title}」を削除しますか？この操作は取り消せません。`)){savePerformances(loadPerformances().filter(x=>x.id!==p.id));location.href="performances.html"}});
 }
 
