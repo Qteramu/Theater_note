@@ -366,3 +366,16 @@ button { font: inherit; }
  .hex-color-field { align-items:flex-start; flex-direction:column; gap:6px; }
  .character-color-preview { flex-wrap:wrap; }
 }
+
+
+/* Per-show cast and tag color controls */
+.tag-color-manager { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:8px; }
+.tag-color-row { display:flex; align-items:center; gap:8px; padding:7px 9px; border:1px solid var(--line); border-radius:11px; background:#fffefa; }
+.tag-color-chip { flex:1; min-width:0; padding:5px 8px; border-radius:7px; background:color-mix(in srgb,var(--tag-color) 28%,#fff); border:1px solid color-mix(in srgb,var(--tag-color) 55%,#fff); font-size:.75rem; overflow-wrap:anywhere; }
+.tag-color-row input[type="color"] { width:34px; height:30px; border:0; padding:0; background:transparent; cursor:pointer; }
+.show-tag { background:color-mix(in srgb,var(--tag-color) 30%,#fff) !important; border-color:color-mix(in srgb,var(--tag-color) 65%,#fff) !important; }
+.calendar-event-tags i { display:inline-block; padding:1px 4px; margin:1px 2px 0 0; border-radius:4px; background:color-mix(in srgb,var(--tag-color) 32%,#fff); font-style:normal; }
+#performanceCastPicker { padding:12px; border:1px solid var(--line); border-radius:13px; background:#fcfaf6; }
+
+.detail-cast { margin:14px 0; padding:12px 0; border-top:1px solid var(--line); }
+.detail-cast > strong { font-size:.8rem; }

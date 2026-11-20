@@ -26,7 +26,7 @@ function normalizePerformance(raw){
  return {id:String(raw.id||makeId()),title,venue:String(raw.venue||raw.location||"").trim(),
  periodStart:String(raw.periodStart||raw.startDate||"").slice(0,10),periodEnd:String(raw.periodEnd||raw.endDate||"").slice(0,10),
  themeColor:/^#[0-9a-fA-F]{6}$/.test(raw.themeColor||raw.color||"")?(raw.themeColor||raw.color):"#D8C5E8",
- generalEvents:String(raw.generalEvents||raw.events||"").trim(),memo:String(raw.memo||"").trim(),
+ generalEvents:String(raw.generalEvents||raw.events||"").trim(),memo:String(raw.memo||"").trim(),castIds:Array.isArray(raw.castIds)?[...new Set(raw.castIds.map(String))]:[],guestCastIds:Array.isArray(raw.guestCastIds)?[...new Set(raw.guestCastIds.map(String))]:[],tagColors:raw.tagColors&&typeof raw.tagColors==="object"?raw.tagColors:{},
  dates:dates.map(d=>({id:String(d.id||makeId()),date:String(d.date||d.day||"").slice(0,10),startTime:String(d.startTime||d.time||"").slice(0,5),
  tags:Array.isArray(d.tags)?[...new Set(d.tags.map(t=>String(t).trim()).filter(Boolean))]:String(d.tags||"").split(/[、,，]/).map(t=>t.trim()).filter(Boolean),status:Object.hasOwn(STATUS_LABELS,d.status)?d.status:"undecided",memo:String(d.memo||"").trim(),characterIds:Array.isArray(d.characterIds)?[...new Set(d.characterIds.map(String))]:[],guestCharacterIds:Array.isArray(d.guestCharacterIds)?[...new Set(d.guestCharacterIds.map(String))]:[],allCast:!!d.allCast})).filter(d=>d.date)};
 }
@@ -70,7 +70,7 @@ function dateRowTemplate(d={}){
  function drawCharacters(){
   const selected=JSON.parse(row.dataset.selectedCharacters||"[]"),guests=JSON.parse(row.dataset.guestCharacters||"[]");
   charPicker.innerHTML="";
-  const chars=loadCharacters();
+  const allowed=JSON.parse(document.getElementById("performanceForm")?.dataset.castIds||"[]");const chars=loadCharacters().filter(c=>allowed.includes(c.id));
   if(!chars.length){charPicker.innerHTML='<span class="picker-empty">Settingsからキャラクターを登録できます。</span>';return}
   chars.forEach(c=>{
    const wrap=document.createElement("div");wrap.className="character-choice-wrap";
@@ -96,12 +96,41 @@ function collectForm(){
  tags:JSON.parse(r.dataset.selectedTags||"[]"),status:r.querySelector(".status-value").value,memo:r.querySelector(".memo-value").value.trim(),characterIds:JSON.parse(r.dataset.selectedCharacters||"[]"),guestCharacterIds:JSON.parse(r.dataset.guestCharacters||"[]"),allCast:r.querySelector(".all-cast-value").checked})).filter(d=>d.date);
  return normalizePerformance({id:document.getElementById("editingId").value||makeId(),title:document.getElementById("title").value,venue:document.getElementById("venue").value,
  periodStart:document.getElementById("periodStart").value,periodEnd:document.getElementById("periodEnd").value,themeColor:document.getElementById("themeColor").value,
- generalEvents:document.getElementById("generalEvents").value,memo:document.getElementById("memo").value,dates});
+ generalEvents:"",memo:document.getElementById("memo").value,castIds:JSON.parse(document.getElementById("performanceForm").dataset.castIds||"[]"),guestCastIds:JSON.parse(document.getElementById("performanceForm").dataset.guestCastIds||"[]"),tagColors:JSON.parse(document.getElementById("performanceForm").dataset.tagColors||"{}"),dates});
+}
+
+const PICKER_COLORS=["#D98B91","#E9B7A9","#E8C77A","#A8B99A","#83B7AD","#91AFCB","#A5A0C9","#C3A3C8","#B4A69A","#77777D","#D94B50","#405FBA","#438B62","#E5C83E","#FFFFFF"];
+function initPerformanceColorPicker(initial){
+ const input=document.getElementById("themeColor"),palette=document.getElementById("performancePalette");if(!input||!palette)return;
+ function set(v){if(!/^#[0-9a-fA-F]{6}$/.test(v))return;input.value=v.toUpperCase();document.getElementById("performanceColorCode").textContent=v.toUpperCase();document.querySelector("#performanceColorPreview .preview-color-dot").style.background=v;palette.querySelectorAll("button").forEach(b=>b.classList.toggle("selected",b.dataset.color.toLowerCase()===v.toLowerCase()))}
+ palette.innerHTML=PICKER_COLORS.map(c=>`<button type="button" class="palette-swatch" data-color="${c}" style="--swatch:${c}" aria-label="${c}"><span></span></button>`).join("");
+ palette.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>set(b.dataset.color)));
+ input.oninput=()=>set(input.value);set(initial);
+}
+function renderPerformanceCast(){
+ const root=document.getElementById("performanceCastPicker"),form=document.getElementById("performanceForm");if(!root)return;
+ let ids=JSON.parse(form.dataset.castIds||"[]"),guests=JSON.parse(form.dataset.guestCastIds||"[]");
+ const chars=loadCharacters();
+ if(!chars.length){root.innerHTML='<span class="picker-empty">先にキャラクター辞典へ登録してください。</span>';return}
+ root.innerHTML=chars.map(c=>`<div class="character-choice-wrap"><button type="button" class="character-choice ${ids.includes(c.id)?"selected":""}" data-id="${esc(c.id)}" style="--character-color:${esc(characterColor(c))}">${esc(characterLabel(c))}</button>${ids.includes(c.id)?`<button type="button" class="guest-toggle ${guests.includes(c.id)?"active":""}" data-guest="${esc(c.id)}">${guests.includes(c.id)?"ゲスト✓":"ゲスト"}</button>`:""}</div>`).join("");
+ root.querySelectorAll("[data-id]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.id;ids=ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];if(!ids.includes(id))guests=guests.filter(x=>x!==id);form.dataset.castIds=JSON.stringify(ids);form.dataset.guestCastIds=JSON.stringify(guests);renderPerformanceCast();document.querySelectorAll("#dateRows .date-row").forEach(row=>{row.dataset.selectedCharacters=JSON.stringify(JSON.parse(row.dataset.selectedCharacters||"[]").filter(x=>ids.includes(x)));row.querySelector(".character-picker").innerHTML="";});}));
+ root.querySelectorAll("[data-guest]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.guest;guests=guests.includes(id)?guests.filter(x=>x!==id):[...guests,id];form.dataset.guestCastIds=JSON.stringify(guests);renderPerformanceCast()}));
+}
+function renderPerformanceTagColors(){
+ const root=document.getElementById("performanceTagColors"),form=document.getElementById("performanceForm");if(!root)return;
+ const tags=loadTagCatalog(),map=JSON.parse(form.dataset.tagColors||"{}");
+ root.innerHTML=tags.map((t,i)=>`<label class="tag-color-row"><span class="tag-color-chip" style="--tag-color:${esc(map[t]||"#E8E2D9")}">${esc(t)}</span><input type="color" value="${/^#[0-9a-fA-F]{6}$/.test(map[t]||"")?map[t]:"#E8E2D9"}" data-tag="${esc(t)}" aria-label="${esc(t)}の色"></label>`).join("");
+ root.querySelectorAll("input").forEach(input=>input.addEventListener("input",()=>{map[input.dataset.tag]=input.value;form.dataset.tagColors=JSON.stringify(map);input.previousElementSibling.style.setProperty("--tag-color",input.value)}));
 }
 function fillForm(p){
  document.getElementById("editingId").value=p?.id||"";
  for(const key of ["title","venue","periodStart","periodEnd","themeColor","memo"])document.getElementById(key).value=p?.[key]??(key==="themeColor"?"#D8C5E8":"");
  const holder=document.getElementById("dateRows");holder.replaceChildren();(p?.dates?.length?p.dates:[{}]).forEach(d=>holder.append(dateRowTemplate(d)));
+ const form=document.getElementById("performanceForm");
+ form.dataset.castIds=JSON.stringify(p?.castIds||[...new Set((p?.dates||[]).flatMap(d=>d.characterIds||[]))]);
+ form.dataset.guestCastIds=JSON.stringify(p?.guestCastIds||[]);
+ form.dataset.tagColors=JSON.stringify(p?.tagColors||{});
+ renderPerformanceCast();renderPerformanceTagColors();initPerformanceColorPicker(p?.themeColor||"#D8C5E8");
  document.getElementById("savePerformance").textContent=p?"変更を保存":"公演を登録";
  document.getElementById("editPageTitle").textContent=p?"公演を編集":"公演を登録";
 }
@@ -162,10 +191,11 @@ function initDetailPage(){
  const groups=dates.reduce((acc,d)=>{(acc[d.date]??=[]).push(d);return acc},{});
  root.innerHTML=`<section class="card detail-card"><div class="detail-title-row"><span class="performance-color" style="background:${esc(p.themeColor)}"></span><div><h2>${esc(p.title)}</h2><p>${esc(p.venue||"会場未設定")}</p><div class="performance-period">${esc(formatPeriod(p))}</div></div></div>
  <div class="detail-meta"><span>${dates.length}公演</span></div>
+ ${p.castIds?.length?`<div class="detail-cast"><strong>出演キャラクター</strong><div class="character-display">${loadCharacters().filter(c=>p.castIds.includes(c.id)).map(c=>`<span class="cast-chip" style="--character-color:${esc(characterColor(c))}">${esc(characterLabel(c))}${(p.guestCastIds||[]).includes(c.id)?'<small>GUEST</small>':""}</span>`).join("")}</div></div>`:""}
  ${p.memo?`<div class="detail-memo"><strong>公演メモ</strong><p>${esc(p.memo).replace(/\\n/g,"<br>")}</p></div>`:""}
  <div class="detail-actions"><a class="btn btn-primary" href="show-edit.html?id=${encodeURIComponent(p.id)}">編集する</a><button class="btn delete-detail" type="button">公演を削除</button></div></section>
  <section class="card schedule-card"><h2 class="card-title">公演日程</h2><p class="help-text">日付をタップすると、その日の公演情報が開きます。</p>
- ${Object.keys(groups).length?Object.entries(groups).map(([day,ds],i)=>`<details class="schedule-day" ${i===0?"":""}><summary><strong>${esc(day)}</strong><span>${ds.length}公演</span></summary><div class="schedule-day-content">${ds.map(d=>`<div class="schedule-item"><div class="schedule-time">${esc(d.startTime||"時間未定")}</div><div class="schedule-item-main"><strong>${esc(d.tags?.[0]||"公演")}</strong>${renderDateCharacters(d)}${d.tags?.length?`<div class="tag-list">${d.tags.map(t=>`<span class="show-tag">${esc(t)}</span>`).join("")}</div>`:""}${d.memo?`<p>${esc(d.memo)}</p>`:""}</div><span class="status status-${d.status==="attended"?"done":d.status==="planned"?"planned":d.status==="absent"?"no":"pending"}">${STATUS_LABELS[d.status]}</span></div>`).join("")}</div></details>`).join(""):'<div class="placeholder-note">公演日程はまだ登録されていません。</div>'}</section>`;
+ ${Object.keys(groups).length?Object.entries(groups).map(([day,ds],i)=>`<details class="schedule-day" ${i===0?"":""}><summary><strong>${esc(day)}</strong><span>${ds.length}公演</span></summary><div class="schedule-day-content">${ds.map(d=>`<div class="schedule-item"><div class="schedule-time">${esc(d.startTime||"時間未定")}</div><div class="schedule-item-main"><strong>${esc(d.tags?.[0]||"公演")}</strong>${renderDateCharacters(d)}${d.tags?.length?`<div class="tag-list">${d.tags.map(t=>`<span class="show-tag" style="--tag-color:${esc(p.tagColors?.[t]||"#E8E2D9")}">${esc(t)}</span>`).join("")}</div>`:""}${d.memo?`<p>${esc(d.memo)}</p>`:""}</div><span class="status status-${d.status==="attended"?"done":d.status==="planned"?"planned":d.status==="absent"?"no":"pending"}">${STATUS_LABELS[d.status]}</span></div>`).join("")}</div></details>`).join(""):'<div class="placeholder-note">公演日程はまだ登録されていません。</div>'}</section>`;
  root.querySelector(".delete-detail").addEventListener("click",()=>{if(confirm(`「${p.title}」を削除しますか？この操作は取り消せません。`)){savePerformances(loadPerformances().filter(x=>x.id!==p.id));location.href="performances.html"}});
 }
 
@@ -199,7 +229,7 @@ function initCalendarPage(){
     a.style.setProperty("--event-color",performance.themeColor||"#b8c8b9");
     const time=date.startTime?`${date.startTime} `:"";
     const cast=date.allCast?"全員":loadCharacters().filter(c=>(date.characterIds||[]).includes(c.id)).map(c=>characterLabel(c)).join("・");
-    a.innerHTML=`<span class="calendar-event-main">${esc(time+performance.title)}</span>${cast?`<span class="calendar-event-tags">${esc(cast)}</span>`:""}${date.tags?.length?`<span class="calendar-event-tags">${date.tags.slice(0,2).map(t=>`<i>${esc(t)}</i>`).join("")}</span>`:""}`;
+    a.innerHTML=`<span class="calendar-event-main">${esc(time+performance.title)}</span>${cast?`<span class="calendar-event-tags">${esc(cast)}</span>`:""}${date.tags?.length?`<span class="calendar-event-tags">${date.tags.slice(0,2).map(t=>`<i style="--tag-color:${esc(performance.tagColors?.[t]||"#E8E2D9")}">${esc(t)}</i>`).join("")}</span>`:""}`;
     a.title=`${time}${performance.title}${date.events?"｜"+date.events:""}`;
     eventWrap.append(a);
    });

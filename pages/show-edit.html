@@ -7,12 +7,14 @@
 <a class="nav-link" data-nav="calendar" href="calendar.html"><span class="nav-icon">▦</span><span>Calendar</span></a>
 <a class="nav-link" data-nav="performances" href="performances.html"><span class="nav-icon">♧</span><span>Shows</span></a>
 <a class="nav-link" data-nav="log" href="log.html"><span class="nav-icon">▤</span><span>Theater Log</span></a>
-<a class="nav-link" data-nav="settings" href="settings.html"><span class="nav-icon">⚙</span><span>Settings</span></a></nav></aside><main class="main"><header class="mobile-header"><div class="brand"><div class="brand-kicker">MY PERSONAL THEATER PLANNER</div><div class="brand-name">Theater Note</div></div></header><div class="page-wrap"><div class="page-heading"><div><div class="eyebrow">THEATER NOTE / SHOW EDIT</div><h1 id="editPageTitle">公演を登録</h1><p class="page-subtitle">公演情報と日程を入力します。</p></div><a class="btn" href="performances.html">一覧に戻る</a></div>
+<a class="nav-link" data-nav="settings" href="settings.html"><span class="nav-icon">♧</span><span>キャラ辞典</span></a></nav></aside><main class="main"><header class="mobile-header"><div class="brand"><div class="brand-kicker">MY PERSONAL THEATER PLANNER</div><div class="brand-name">Theater Note</div></div></header><div class="page-wrap"><div class="page-heading"><div><div class="eyebrow">THEATER NOTE / SHOW EDIT</div><h1 id="editPageTitle">公演を登録</h1><p class="page-subtitle">公演情報と日程を入力します。</p></div><a class="btn" href="performances.html">一覧に戻る</a></div>
 <section class="card"><form id="performanceForm" class="form-grid"><input type="hidden" id="editingId">
 <label class="field"><span>公演名 *</span><input id="title" required maxlength="160" placeholder="例：エリオスR THE STAGE"></label>
 <label class="field"><span>会場</span><input id="venue" maxlength="160" placeholder="例：日本青年館ホール"></label>
 <div class="field full"><span>公演期間</span><div class="field-row"><input id="periodStart" type="date" aria-label="公演開始日"><span>〜</span><input id="periodEnd" type="date" aria-label="公演終了日"></div></div>
-<label class="field"><span>テーマカラー</span><input id="themeColor" type="color" value="#D8C5E8"></label>
+<div class="field full"><span>公演カラー</span><div class="color-picker-panel"><div class="color-palette" id="performancePalette"></div><details class="custom-color-details"><summary>カスタムカラー</summary><label class="hex-color-field"><span>カラーコード</span><input id="themeColor" type="text" value="#D8C5E8" maxlength="7"></label></details><div class="character-color-preview" id="performanceColorPreview"><span class="preview-color-dot"></span><div><strong>公演カラー</strong><small>カレンダー・公演一覧に反映</small></div><code id="performanceColorCode">#D8C5E8</code></div></div></div>
+<div class="field full"><div class="subheading-row"><h3>出演キャラクター</h3><a class="btn" href="settings.html">キャラクター辞典を管理</a></div><p class="help-text">この公演に出演するキャラクターを選択します。ゲスト出演も公演単位で設定できます。</p><div id="performanceCastPicker" class="character-picker"></div></div>
+<div class="field full"><h3>タグカラー</h3><p class="help-text">この公演で使うタグの色を設定します。</p><div id="performanceTagColors" class="tag-color-manager"></div></div>
 
 <label class="field full"><span>公演全体のメモ</span><textarea id="memo" rows="3" placeholder="出演者、記念日、注意事項など"></textarea></label>
 <div class="field full"><div class="subheading-row"><h3>公演日程</h3><button type="button" class="btn" id="addDateRow">＋ 日程を追加</button></div><div id="dateRows" class="date-rows"></div></div>
@@ -21,4 +23,4 @@
 <a class="nav-link" data-nav="calendar" href="calendar.html"><span class="nav-icon">▦</span><span>Calendar</span></a>
 <a class="nav-link" data-nav="performances" href="performances.html"><span class="nav-icon">♧</span><span>Shows</span></a>
 <a class="nav-link" data-nav="log" href="log.html"><span class="nav-icon">▤</span><span>Log</span></a>
-<a class="nav-link" data-nav="settings" href="settings.html"><span class="nav-icon">⚙</span><span>Settings</span></a></div></nav></div></body></html>
+<a class="nav-link" data-nav="settings" href="settings.html"><span class="nav-icon">♧</span><span>キャラ辞典</span></a></div></nav></div></body></html>
