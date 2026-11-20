@@ -220,9 +220,24 @@ function initCalendarPage(){
 function initSettingsPage(){
  const root=document.getElementById("characterManager");if(!root)return;
  let editingId="";
+ const palette=["#D98B91","#E9B7A9","#E8C77A","#A8B99A","#83B7AD","#91AFCB","#A5A0C9","#C3A3C8","#B4A69A","#77777D","#D94B50","#405FBA","#438B62","#E5C83E","#FFFFFF"];
+ const colorInput=document.getElementById("characterColor");
+ const paletteRoot=document.getElementById("characterPalette");
+ function setColor(value){
+  if(!/^#[0-9a-fA-F]{6}$/.test(value))return;
+  colorInput.value=value.toUpperCase();
+  document.getElementById("characterColorCode").textContent=value.toUpperCase();
+  document.querySelector(".preview-color-dot").style.background=value;
+  document.getElementById("characterColorPreview").style.setProperty("--preview-color",value);
+  paletteRoot.querySelectorAll("button").forEach(b=>{const active=b.dataset.color.toLowerCase()===value.toLowerCase();b.classList.toggle("selected",active);b.setAttribute("aria-pressed",active?"true":"false")});
+ }
+ paletteRoot.innerHTML=palette.map((c,i)=>`<button type="button" class="palette-swatch" data-color="${c}" aria-label="カラー ${i+1}" title="${c}" style="--swatch:${c}"><span></span></button>`).join("");
+ paletteRoot.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>setColor(b.dataset.color)));
+ colorInput.addEventListener("input",()=>{const v=colorInput.value.trim();if(/^#[0-9a-fA-F]{6}$/.test(v))setColor(v)});
+ colorInput.addEventListener("blur",()=>{if(!/^#[0-9a-fA-F]{6}$/.test(colorInput.value.trim()))colorInput.value=document.getElementById("characterColorCode").textContent});
  function render(){
   const chars=loadCharacters();
-  root.innerHTML=`<div class="character-admin-list">${chars.length?chars.map(c=>`<div class="character-admin-row"><span class="character-color-tab" style="background:${esc(characterColor(c))}"></span><div class="character-admin-info"><strong>${esc(characterLabel(c))}</strong><span>${esc(c.name)}${c.actorName?" ／ "+esc(c.actorName):" ／ 俳優名未登録"}</span></div><button class="btn character-edit" data-id="${esc(c.id)}">編集</button><button class="btn character-delete" data-id="${esc(c.id)}">削除</button></div>`).join(""):'<div class="placeholder-note">キャラクターはまだ登録されていません。</div>'}</div>`;
+  root.innerHTML=`<div class="character-admin-list">${chars.length?chars.map(c=>`<div class="character-admin-row"><span class="character-color-tab" style="background:${esc(characterColor(c))}"></span><div class="character-admin-info" style="--admin-color:${esc(characterColor(c))}"><strong>${esc(characterLabel(c))}</strong><span>${esc(c.name)}${c.actorName?" ／ "+esc(c.actorName):" ／ 俳優名未登録"}</span></div><button class="btn character-edit" data-id="${esc(c.id)}">編集</button><button class="btn character-delete" data-id="${esc(c.id)}">削除</button></div>`).join(""):'<div class="placeholder-note">キャラクターはまだ登録されていません。</div>'}</div>`;
   root.querySelectorAll(".character-edit").forEach(b=>b.addEventListener("click",()=>{const c=chars.find(x=>x.id===b.dataset.id);if(c)fill(c)}));
   root.querySelectorAll(".character-delete").forEach(b=>b.addEventListener("click",()=>{const c=chars.find(x=>x.id===b.dataset.id);if(!c)return;if(!confirm(`「${characterLabel(c)}」を削除しますか？公演日程の選択からも外れます。`))return;saveCharacters(loadCharacters().filter(x=>x.id!==c.id));savePerformances(loadPerformances().map(p=>({...p,dates:p.dates.map(d=>({...d,characterIds:(d.characterIds||[]).filter(x=>x!==c.id),guestCharacterIds:(d.guestCharacterIds||[]).filter(x=>x!==c.id)}))})));render()}));
  }
@@ -231,7 +246,7 @@ function initSettingsPage(){
   document.getElementById("characterName").value=c?.name||"";
   document.getElementById("characterDisplayName").value=c?.displayName||"";
   document.getElementById("actorName").value=c?.actorName||"";
-  document.getElementById("characterColor").value=characterColor(c||{});
+  setColor(characterColor(c||{}));
   document.getElementById("saveCharacter").textContent=c?"変更を保存":"キャラクターを登録";
  }
  document.getElementById("characterForm").addEventListener("submit",e=>{e.preventDefault();

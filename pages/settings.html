@@ -10,7 +10,14 @@
 <label class="field"><span>キャラクター名（フルネーム） *</span><input id="characterName" required maxlength="80" placeholder="例：ガスト・アドラー"></label>
 <label class="field"><span>表示名（姓なし）</span><input id="characterDisplayName" maxlength="40" placeholder="例：ガスト"></label>
 <label class="field"><span>俳優名</span><input id="actorName" maxlength="80" placeholder="例：俳優名"></label>
-<label class="field"><span>タブカラー</span><input id="characterColor" type="color" value="#D8C5E8"></label>
+<div class="field full"><span>タブカラー</span>
+<div class="color-picker-panel">
+ <div class="color-palette" id="characterPalette" aria-label="カラーを選択"></div>
+ <details class="custom-color-details"><summary>カスタムカラーを指定する</summary>
+  <label class="hex-color-field"><span>カラーコード</span><input id="characterColor" type="text" value="#A5A0C9" maxlength="7" placeholder="#A5A0C9" inputmode="text"></label>
+ </details>
+ <div class="character-color-preview" id="characterColorPreview"><span class="preview-color-dot"></span><div><strong>カラータグのプレビュー</strong><small>ガスト　／　出演キャラクター</small></div><code id="characterColorCode">#A5A0C9</code></div>
+</div></div>
 <div class="field full form-actions"><button class="btn btn-primary" id="saveCharacter" type="submit">キャラクターを登録</button><button class="btn" id="resetCharacter" type="button">入力をクリア</button></div>
 </form><div class="character-preview-note">カラーは公演日程・カレンダーに表示するキャラクタータブの色に反映されます。</div>
 <div id="characterManager" class="character-manager-list"></div></section>
