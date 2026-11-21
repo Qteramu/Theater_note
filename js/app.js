@@ -26,7 +26,7 @@ function normalizePerformance(raw){
  return {id:String(raw.id||makeId()),title,venue:String(raw.venue||raw.location||"").trim(),
  periodStart:String(raw.periodStart||raw.startDate||"").slice(0,10),periodEnd:String(raw.periodEnd||raw.endDate||"").slice(0,10),
  themeColor:/^#[0-9a-fA-F]{6}$/.test(raw.themeColor||raw.color||"")?(raw.themeColor||raw.color):"#D8C5E8",
- generalEvents:String(raw.generalEvents||raw.events||"").trim(),memo:String(raw.memo||"").trim(),castIds:Array.isArray(raw.castIds)?[...new Set(raw.castIds.map(String))]:[],guestCastIds:Array.isArray(raw.guestCastIds)?[...new Set(raw.guestCastIds.map(String))]:[],tagColors:raw.tagColors&&typeof raw.tagColors==="object"?raw.tagColors:{},
+ generalEvents:String(raw.generalEvents||raw.events||"").trim(),memo:String(raw.memo||"").trim(),castIds:Array.isArray(raw.castIds)?[...new Set(raw.castIds.map(String))]:[],guestCastIds:Array.isArray(raw.guestCastIds)?[...new Set(raw.guestCastIds.map(String))]:[],tagColors:raw.tagColors&&typeof raw.tagColors==="object"?raw.tagColors:{},tagDefinitions:raw.tagDefinitions&&typeof raw.tagDefinitions==="object"?raw.tagDefinitions:{},
  dates:dates.map(d=>({id:String(d.id||makeId()),date:String(d.date||d.day||"").slice(0,10),startTime:String(d.startTime||d.time||"").slice(0,5),
  tags:Array.isArray(d.tags)?[...new Set(d.tags.map(t=>String(t).trim()).filter(Boolean))]:String(d.tags||"").split(/[、,，]/).map(t=>t.trim()).filter(Boolean),status:Object.hasOwn(STATUS_LABELS,d.status)?d.status:"undecided",memo:String(d.memo||"").trim(),characterIds:Array.isArray(d.characterIds)?[...new Set(d.characterIds.map(String))]:[],guestCharacterIds:Array.isArray(d.guestCharacterIds)?[...new Set(d.guestCharacterIds.map(String))]:[],allCast:!!d.allCast})).filter(d=>d.date)};
 }
@@ -37,9 +37,8 @@ function dateRowTemplate(d={}){
  row.innerHTML=`<label class="field"><span>日付</span><input type="date" class="date-value" value="${esc(d.date||"")}"></label>
  <label class="field"><span>開演</span><input type="time" class="time-value" value="${esc(d.startTime||"")}"></label>
  <div class="field full tag-picker-field"><span>タグ（タップして選択・複数可）</span><div class="tag-picker"></div>
- <div class="tag-create"><input class="new-tag-value" placeholder="新しいタグを追加"><button type="button" class="btn add-tag">追加</button></div></div>
+ </div>
 
- <div class="field full character-picker-field"><span>出演キャラクター（複数選択可）</span><div class="character-picker"></div><label class="all-cast-choice"><input type="checkbox" class="all-cast-value" ${d.allCast?"checked":""}> 全員出演</label></div>
  <label class="field"><span>参加状況</span><select class="status-value"><option value="undecided">未定</option><option value="planned">参加予定</option><option value="attended">参加済み</option><option value="absent">不参加</option></select></label>
  <label class="field date-memo"><span>日別メモ</span><input class="memo-value" value="${esc(d.memo||"")}" placeholder="記念日・座席など"></label>
  <button type="button" class="remove-date" aria-label="この日程を削除">×</button>`;
@@ -48,7 +47,7 @@ function dateRowTemplate(d={}){
  function drawTags(){
   const selected=JSON.parse(row.dataset.selectedTags||"[]");
   picker.innerHTML="";
-  loadTagCatalog().forEach(tag=>{
+  const defs=JSON.parse(document.getElementById("performanceForm")?.dataset.tagDefinitions||"{}");Object.keys(defs).forEach(tag=>{
    const b=document.createElement("button");b.type="button";b.className="tag-choice"+(selected.includes(tag)?" selected":"");b.textContent=tag;
    b.setAttribute("aria-pressed",selected.includes(tag)?"true":"false");
    b.addEventListener("click",()=>{const current=JSON.parse(row.dataset.selectedTags||"[]");row.dataset.selectedTags=JSON.stringify(current.includes(tag)?current.filter(t=>t!==tag):[...current,tag]);drawTags()});
@@ -56,47 +55,16 @@ function dateRowTemplate(d={}){
   });
  }
  drawTags();
- row.querySelector(".add-tag").addEventListener("click",()=>{
-  const input=row.querySelector(".new-tag-value"),tag=input.value.trim();if(!tag)return;
-  saveTagCatalog([...loadTagCatalog(),tag]);
-  const selected=JSON.parse(row.dataset.selectedTags||"[]");if(!selected.includes(tag))selected.push(tag);row.dataset.selectedTags=JSON.stringify(selected);
-  input.value="";drawTags();
- });
- row.querySelector(".new-tag-value").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();row.querySelector(".add-tag").click()}});
 
- row.dataset.selectedCharacters=JSON.stringify(Array.isArray(d.characterIds)?d.characterIds:[]);
- row.dataset.guestCharacters=JSON.stringify(Array.isArray(d.guestCharacterIds)?d.guestCharacterIds:[]);
- const charPicker=row.querySelector(".character-picker");
- function drawCharacters(){
-  const selected=JSON.parse(row.dataset.selectedCharacters||"[]"),guests=JSON.parse(row.dataset.guestCharacters||"[]");
-  charPicker.innerHTML="";
-  const allowed=JSON.parse(document.getElementById("performanceForm")?.dataset.castIds||"[]");const chars=loadCharacters().filter(c=>allowed.includes(c.id));
-  if(!chars.length){charPicker.innerHTML='<span class="picker-empty">Settingsからキャラクターを登録できます。</span>';return}
-  chars.forEach(c=>{
-   const wrap=document.createElement("div");wrap.className="character-choice-wrap";
-   const b=document.createElement("button");b.type="button";b.className="character-choice"+(selected.includes(c.id)?" selected":"");
-   b.style.setProperty("--character-color",characterColor(c));b.textContent=characterLabel(c)+(guests.includes(c.id)?"（ゲスト）":"");
-   b.setAttribute("aria-pressed",selected.includes(c.id)?"true":"false");
-   b.addEventListener("click",()=>{row.querySelector(".all-cast-value").checked=false;const next=JSON.parse(row.dataset.selectedCharacters||"[]");row.dataset.selectedCharacters=JSON.stringify(next.includes(c.id)?next.filter(x=>x!==c.id):[...next,c.id]);if(!JSON.parse(row.dataset.selectedCharacters).includes(c.id)){row.dataset.guestCharacters=JSON.stringify(JSON.parse(row.dataset.guestCharacters||"[]").filter(x=>x!==c.id))}drawCharacters()});
-   wrap.append(b);
-   if(selected.includes(c.id)){
-    const g=document.createElement("button");g.type="button";g.className="guest-toggle"+(guests.includes(c.id)?" active":"");g.textContent=guests.includes(c.id)?"ゲスト✓":"ゲスト";g.title="この公演だけゲスト出演にする";
-    g.addEventListener("click",()=>{const next=JSON.parse(row.dataset.guestCharacters||"[]");row.dataset.guestCharacters=JSON.stringify(next.includes(c.id)?next.filter(x=>x!==c.id):[...next,c.id]);drawCharacters()});wrap.append(g);
-   }
-   charPicker.append(wrap);
-  });
- }
- drawCharacters();
- row.querySelector(".all-cast-value").addEventListener("change",e=>{if(e.target.checked){row.dataset.selectedCharacters="[]";row.dataset.guestCharacters="[]";drawCharacters()}});
  row.querySelector(".status-value").value=Object.hasOwn(STATUS_LABELS,d.status)?d.status:"undecided";
  row.querySelector(".remove-date").addEventListener("click",()=>row.remove());return row;
 }
 function collectForm(){
  const dates=[...document.querySelectorAll("#dateRows .date-row")].map(r=>({id:makeId(),date:r.querySelector(".date-value").value,startTime:r.querySelector(".time-value").value,
- tags:JSON.parse(r.dataset.selectedTags||"[]"),status:r.querySelector(".status-value").value,memo:r.querySelector(".memo-value").value.trim(),characterIds:JSON.parse(r.dataset.selectedCharacters||"[]"),guestCharacterIds:JSON.parse(r.dataset.guestCharacters||"[]"),allCast:r.querySelector(".all-cast-value").checked})).filter(d=>d.date);
+ tags:JSON.parse(r.dataset.selectedTags||"[]"),status:r.querySelector(".status-value").value,memo:r.querySelector(".memo-value").value.trim()})).filter(d=>d.date);
  return normalizePerformance({id:document.getElementById("editingId").value||makeId(),title:document.getElementById("title").value,venue:document.getElementById("venue").value,
  periodStart:document.getElementById("periodStart").value,periodEnd:document.getElementById("periodEnd").value,themeColor:document.getElementById("themeColor").value,
- generalEvents:"",memo:document.getElementById("memo").value,castIds:JSON.parse(document.getElementById("performanceForm").dataset.castIds||"[]"),guestCastIds:JSON.parse(document.getElementById("performanceForm").dataset.guestCastIds||"[]"),tagColors:JSON.parse(document.getElementById("performanceForm").dataset.tagColors||"{}"),dates});
+ generalEvents:"",memo:document.getElementById("memo").value,castIds:JSON.parse(document.getElementById("performanceForm").dataset.castIds||"[]"),guestCastIds:JSON.parse(document.getElementById("performanceForm").dataset.guestCastIds||"[]"),tagColors:JSON.parse(document.getElementById("performanceForm").dataset.tagColors||"{}"),tagDefinitions:JSON.parse(document.getElementById("performanceForm").dataset.tagDefinitions||"{}"),dates});
 }
 
 const PICKER_COLORS=["#D98B91","#E9B7A9","#E8C77A","#A8B99A","#83B7AD","#91AFCB","#A5A0C9","#C3A3C8","#B4A69A","#77777D","#D94B50","#405FBA","#438B62","#E5C83E","#FFFFFF"];
@@ -113,15 +81,27 @@ function renderPerformanceCast(){
  const chars=loadCharacters();
  if(!chars.length){root.innerHTML='<span class="picker-empty">先にキャラクター辞典へ登録してください。</span>';return}
  root.innerHTML=chars.map(c=>`<div class="character-choice-wrap"><button type="button" class="character-choice ${ids.includes(c.id)?"selected":""}" data-id="${esc(c.id)}" style="--character-color:${esc(characterColor(c))}">${esc(characterLabel(c))}</button>${ids.includes(c.id)?`<button type="button" class="guest-toggle ${guests.includes(c.id)?"active":""}" data-guest="${esc(c.id)}">${guests.includes(c.id)?"ゲスト✓":"ゲスト"}</button>`:""}</div>`).join("");
- root.querySelectorAll("[data-id]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.id;ids=ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];if(!ids.includes(id))guests=guests.filter(x=>x!==id);form.dataset.castIds=JSON.stringify(ids);form.dataset.guestCastIds=JSON.stringify(guests);renderPerformanceCast();document.querySelectorAll("#dateRows .date-row").forEach(row=>{row.dataset.selectedCharacters=JSON.stringify(JSON.parse(row.dataset.selectedCharacters||"[]").filter(x=>ids.includes(x)));row.querySelector(".character-picker").innerHTML="";});}));
+ root.querySelectorAll("[data-id]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.id;ids=ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];if(!ids.includes(id))guests=guests.filter(x=>x!==id);form.dataset.castIds=JSON.stringify(ids);form.dataset.guestCastIds=JSON.stringify(guests);renderPerformanceCast();const defs=JSON.parse(form.dataset.tagDefinitions||"{}");Object.keys(defs).forEach(tag=>defs[tag].characterIds=(defs[tag].characterIds||[]).filter(x=>ids.includes(x)));form.dataset.tagDefinitions=JSON.stringify(defs);renderPerformanceTagColors();drawDateTagPickers();}));
  root.querySelectorAll("[data-guest]").forEach(b=>b.addEventListener("click",()=>{const id=b.dataset.guest;guests=guests.includes(id)?guests.filter(x=>x!==id):[...guests,id];form.dataset.guestCastIds=JSON.stringify(guests);renderPerformanceCast()}));
 }
 function renderPerformanceTagColors(){
  const root=document.getElementById("performanceTagColors"),form=document.getElementById("performanceForm");if(!root)return;
- const tags=loadTagCatalog(),map=JSON.parse(form.dataset.tagColors||"{}");
- root.innerHTML=tags.map((t,i)=>`<label class="tag-color-row"><span class="tag-color-chip" style="--tag-color:${esc(map[t]||"#E8E2D9")}">${esc(t)}</span><input type="color" value="${/^#[0-9a-fA-F]{6}$/.test(map[t]||"")?map[t]:"#E8E2D9"}" data-tag="${esc(t)}" aria-label="${esc(t)}の色"></label>`).join("");
- root.querySelectorAll("input").forEach(input=>input.addEventListener("input",()=>{map[input.dataset.tag]=input.value;form.dataset.tagColors=JSON.stringify(map);input.previousElementSibling.style.setProperty("--tag-color",input.value)}));
+ const chars=loadCharacters().filter(c=>JSON.parse(form.dataset.castIds||"[]").includes(c.id));
+ let defs=JSON.parse(form.dataset.tagDefinitions||"{}");
+ function draw(){
+  root.innerHTML=`<div class="tag-create"><input class="tag-new-name" placeholder="新しいタグ名"><button type="button" class="btn tag-create-button">タグを追加</button></div>`+
+   (Object.entries(defs).length?Object.entries(defs).map(([tag,meta])=>{const color=/^#[0-9a-fA-F]{6}$/.test(meta.color||"")?meta.color:"#E8E2D9",ids=meta.characterIds||[];return `<div class="tag-definition-card" data-tag="${esc(tag)}"><div class="tag-definition-head"><span class="tag-color-chip" style="--tag-color:${esc(color)}">${esc(tag)}</span><input type="color" class="tag-definition-color" value="${esc(color)}" aria-label="${esc(tag)}の色"><button type="button" class="btn tag-rename">名前変更</button><button type="button" class="btn tag-delete">削除</button></div><div class="tag-character-links"><small>目印として表示するキャラクター</small>${chars.length?chars.map(c=>`<label class="tag-character-option"><input type="checkbox" data-character="${esc(c.id)}" ${ids.includes(c.id)?"checked":""}><span class="cast-chip" style="--character-color:${esc(characterColor(c))}">${esc(characterLabel(c))}</span></label>`).join(""):'<span class="picker-empty">出演キャラクターを先に登録してください。</span>'}</div></div>`}).join(""):'<div class="placeholder-note">タグはまだありません。上から追加できます。</div>');
+  root.querySelector(".tag-create-button").addEventListener("click",()=>{const input=root.querySelector(".tag-new-name"),name=input.value.trim();if(!name)return;if(defs[name]){alert("同じ名前のタグがすでにあります。");return}defs[name]={color:"#E8E2D9",characterIds:[]};form.dataset.tagDefinitions=JSON.stringify(defs);draw();drawDateTagPickers()});
+  root.querySelectorAll(".tag-definition-card").forEach(card=>{const old=card.dataset.tag;
+   card.querySelector(".tag-definition-color").addEventListener("input",e=>{defs[old].color=e.target.value;form.dataset.tagDefinitions=JSON.stringify(defs);card.querySelector(".tag-color-chip").style.setProperty("--tag-color",e.target.value)});
+   card.querySelectorAll("[data-character]").forEach(ch=>ch.addEventListener("change",()=>{const id=ch.dataset.character,ids=defs[old].characterIds||[];defs[old].characterIds=ch.checked?[...new Set([...ids,id])]:ids.filter(x=>x!==id);form.dataset.tagDefinitions=JSON.stringify(defs)}));
+   card.querySelector(".tag-rename").addEventListener("click",()=>{const value=prompt("新しいタグ名を入力してください",old);if(!value||!value.trim()||value.trim()===old)return;const next=value.trim();if(defs[next]){alert("同じ名前のタグがすでにあります。");return}defs[next]=defs[old];delete defs[old];document.querySelectorAll("#dateRows .date-row").forEach(row=>row.dataset.selectedTags=JSON.stringify(JSON.parse(row.dataset.selectedTags||"[]").map(t=>t===old?next:t)));form.dataset.tagDefinitions=JSON.stringify(defs);draw();drawDateTagPickers()});
+   card.querySelector(".tag-delete").addEventListener("click",()=>{if(!confirm(`「${old}」を削除しますか？使用中の日程からも外れます。`))return;delete defs[old];document.querySelectorAll("#dateRows .date-row").forEach(row=>row.dataset.selectedTags=JSON.stringify(JSON.parse(row.dataset.selectedTags||"[]").filter(t=>t!==old)));form.dataset.tagDefinitions=JSON.stringify(defs);draw();drawDateTagPickers()});
+  });
+ }
+ draw();
 }
+function drawDateTagPickers(){const form=document.getElementById("performanceForm"),defs=JSON.parse(form.dataset.tagDefinitions||"{}");document.querySelectorAll("#dateRows .date-row").forEach(row=>{const picker=row.querySelector(".tag-picker"),selected=JSON.parse(row.dataset.selectedTags||"[]");picker.innerHTML="";Object.entries(defs).forEach(([tag,meta])=>{const b=document.createElement("button");b.type="button";b.className="tag-choice"+(selected.includes(tag)?" selected":"");b.textContent=tag;b.style.setProperty("--tag-color",meta.color||"#E8E2D9");b.addEventListener("click",()=>{const now=JSON.parse(row.dataset.selectedTags||"[]");row.dataset.selectedTags=JSON.stringify(now.includes(tag)?now.filter(t=>t!==tag):[...now,tag]);drawDateTagPickers()});picker.append(b)})})}
 function fillForm(p){
  document.getElementById("editingId").value=p?.id||"";
  for(const key of ["title","venue","periodStart","periodEnd","themeColor","memo"])document.getElementById(key).value=p?.[key]??(key==="themeColor"?"#D8C5E8":"");
@@ -130,7 +110,8 @@ function fillForm(p){
  form.dataset.castIds=JSON.stringify(p?.castIds||[...new Set((p?.dates||[]).flatMap(d=>d.characterIds||[]))]);
  form.dataset.guestCastIds=JSON.stringify(p?.guestCastIds||[]);
  form.dataset.tagColors=JSON.stringify(p?.tagColors||{});
- renderPerformanceCast();renderPerformanceTagColors();initPerformanceColorPicker(p?.themeColor||"#D8C5E8");
+ const defs={...(p?.tagDefinitions||{})};[...DEFAULT_TAGS,...(p?.dates||[]).flatMap(d=>d.tags||[])].forEach(t=>{if(!defs[t])defs[t]={color:p?.tagColors?.[t]||"#E8E2D9",characterIds:[]}});form.dataset.tagDefinitions=JSON.stringify(defs);
+ renderPerformanceCast();renderPerformanceTagColors();drawDateTagPickers();initPerformanceColorPicker(p?.themeColor||"#D8C5E8");
  document.getElementById("savePerformance").textContent=p?"変更を保存":"公演を登録";
  document.getElementById("editPageTitle").textContent=p?"公演を編集":"公演を登録";
 }
@@ -178,11 +159,10 @@ function initListPage(){
  });
 }
 
-function renderDateCharacters(d){
- if(d.allCast)return '<div class="character-display"><span class="cast-chip all-cast">全員</span></div>';
- const chars=loadCharacters().filter(c=>(d.characterIds||[]).includes(c.id));
+function renderDateCharacters(d,p){
+ const ids=[...new Set((d.tags||[]).flatMap(t=>p?.tagDefinitions?.[t]?.characterIds||[]))];const chars=loadCharacters().filter(c=>ids.includes(c.id));
  if(!chars.length)return "";
- return '<div class="character-display">'+chars.map(c=>`<span class="cast-chip ${((d.guestCharacterIds||[]).includes(c.id))?'guest':''}" style="--character-color:${esc(characterColor(c))}">${esc(characterLabel(c))}${(d.guestCharacterIds||[]).includes(c.id)?'<small>GUEST</small>':""}</span>`).join("")+'</div>';
+ return '<div class="character-display">'+chars.map(c=>`<span class="cast-chip" style="--character-color:${esc(characterColor(c))}">${esc(characterLabel(c))}</span>`).join("")+'</div>';
 }
 function initDetailPage(){
  const root=document.getElementById("showDetail");if(!root)return;const id=new URLSearchParams(location.search).get("id");const p=loadPerformances().find(x=>x.id===id);
@@ -195,7 +175,7 @@ function initDetailPage(){
  ${p.memo?`<div class="detail-memo"><strong>公演メモ</strong><p>${esc(p.memo).replace(/\\n/g,"<br>")}</p></div>`:""}
  <div class="detail-actions"><a class="btn btn-primary" href="show-edit.html?id=${encodeURIComponent(p.id)}">編集する</a><button class="btn delete-detail" type="button">公演を削除</button></div></section>
  <section class="card schedule-card"><h2 class="card-title">公演日程</h2><p class="help-text">日付をタップすると、その日の公演情報が開きます。</p>
- ${Object.keys(groups).length?Object.entries(groups).map(([day,ds],i)=>`<details class="schedule-day" ${i===0?"":""}><summary><strong>${esc(day)}</strong><span>${ds.length}公演</span></summary><div class="schedule-day-content">${ds.map(d=>`<div class="schedule-item"><div class="schedule-time">${esc(d.startTime||"時間未定")}</div><div class="schedule-item-main"><strong>${esc(d.tags?.[0]||"公演")}</strong>${renderDateCharacters(d)}${d.tags?.length?`<div class="tag-list">${d.tags.map(t=>`<span class="show-tag" style="--tag-color:${esc(p.tagColors?.[t]||"#E8E2D9")}">${esc(t)}</span>`).join("")}</div>`:""}${d.memo?`<p>${esc(d.memo)}</p>`:""}</div><span class="status status-${d.status==="attended"?"done":d.status==="planned"?"planned":d.status==="absent"?"no":"pending"}">${STATUS_LABELS[d.status]}</span></div>`).join("")}</div></details>`).join(""):'<div class="placeholder-note">公演日程はまだ登録されていません。</div>'}</section>`;
+ ${Object.keys(groups).length?Object.entries(groups).map(([day,ds],i)=>`<details class="schedule-day" ${i===0?"":""}><summary><strong>${esc(day)}</strong><span>${ds.length}公演</span></summary><div class="schedule-day-content">${ds.map(d=>`<div class="schedule-item"><div class="schedule-time">${esc(d.startTime||"時間未定")}</div><div class="schedule-item-main"><strong>${esc(d.tags?.[0]||"公演")}</strong>${renderDateCharacters(d,p)}${d.tags?.length?`<div class="tag-list">${d.tags.map(t=>`<span class="show-tag" style="--tag-color:${esc(p.tagDefinitions?.[t]?.color||p.tagColors?.[t]||"#E8E2D9")}">${esc(t)}</span>`).join("")}</div>`:""}${d.memo?`<p>${esc(d.memo)}</p>`:""}</div><span class="status status-${d.status==="attended"?"done":d.status==="planned"?"planned":d.status==="absent"?"no":"pending"}">${STATUS_LABELS[d.status]}</span></div>`).join("")}</div></details>`).join(""):'<div class="placeholder-note">公演日程はまだ登録されていません。</div>'}</section>`;
  root.querySelector(".delete-detail").addEventListener("click",()=>{if(confirm(`「${p.title}」を削除しますか？この操作は取り消せません。`)){savePerformances(loadPerformances().filter(x=>x.id!==p.id));location.href="performances.html"}});
 }
 
@@ -228,8 +208,8 @@ function initCalendarPage(){
     const a=document.createElement("a");a.className="calendar-event-link";a.href=`show-detail.html?id=${encodeURIComponent(performance.id)}`;
     a.style.setProperty("--event-color",performance.themeColor||"#b8c8b9");
     const time=date.startTime?`${date.startTime} `:"";
-    const cast=date.allCast?"全員":loadCharacters().filter(c=>(date.characterIds||[]).includes(c.id)).map(c=>characterLabel(c)).join("・");
-    a.innerHTML=`<span class="calendar-event-main">${esc(time+performance.title)}</span>${cast?`<span class="calendar-event-tags">${esc(cast)}</span>`:""}${date.tags?.length?`<span class="calendar-event-tags">${date.tags.slice(0,2).map(t=>`<i style="--tag-color:${esc(performance.tagColors?.[t]||"#E8E2D9")}">${esc(t)}</i>`).join("")}</span>`:""}`;
+    const linkedIds=[...new Set((date.tags||[]).flatMap(t=>performance.tagDefinitions?.[t]?.characterIds||[]))];const cast=loadCharacters().filter(c=>linkedIds.includes(c.id)).map(c=>characterLabel(c)).join("・");
+    a.innerHTML=`<span class="calendar-event-main">${esc(time+performance.title)}</span>${cast?`<span class="calendar-event-tags">${esc(cast)}</span>`:""}${date.tags?.length?`<span class="calendar-event-tags">${date.tags.slice(0,2).map(t=>`<i style="--tag-color:${esc(performance.tagDefinitions?.[t]?.color||performance.tagColors?.[t]||"#E8E2D9")}">${esc(t)}</i>`).join("")}</span>`:""}`;
     a.title=`${time}${performance.title}${date.events?"｜"+date.events:""}`;
     eventWrap.append(a);
    });
@@ -267,21 +247,20 @@ function initSettingsPage(){
  colorInput.addEventListener("blur",()=>{if(!/^#[0-9a-fA-F]{6}$/.test(colorInput.value.trim()))colorInput.value=document.getElementById("characterColorCode").textContent});
  function render(){
   const chars=loadCharacters();
-  root.innerHTML=`<div class="character-admin-list">${chars.length?chars.map(c=>`<div class="character-admin-row"><span class="character-color-tab" style="background:${esc(characterColor(c))}"></span><div class="character-admin-info" style="--admin-color:${esc(characterColor(c))}"><strong>${esc(characterLabel(c))}</strong><span>${esc(c.name)}${c.actorName?" ／ "+esc(c.actorName):" ／ 俳優名未登録"}</span></div><button class="btn character-edit" data-id="${esc(c.id)}">編集</button><button class="btn character-delete" data-id="${esc(c.id)}">削除</button></div>`).join(""):'<div class="placeholder-note">キャラクターはまだ登録されていません。</div>'}</div>`;
+  root.innerHTML=`<div class="character-admin-list">${chars.length?chars.map(c=>`<div class="character-admin-row"><span class="character-color-tab" style="background:${esc(characterColor(c))}"></span><div class="character-admin-info" style="--admin-color:${esc(characterColor(c))}"><strong>${esc(characterLabel(c))}</strong><span>${esc(c.name)}</span></div><button class="btn character-edit" data-id="${esc(c.id)}">編集</button><button class="btn character-delete" data-id="${esc(c.id)}">削除</button></div>`).join(""):'<div class="placeholder-note">キャラクターはまだ登録されていません。</div>'}</div>`;
   root.querySelectorAll(".character-edit").forEach(b=>b.addEventListener("click",()=>{const c=chars.find(x=>x.id===b.dataset.id);if(c)fill(c)}));
-  root.querySelectorAll(".character-delete").forEach(b=>b.addEventListener("click",()=>{const c=chars.find(x=>x.id===b.dataset.id);if(!c)return;if(!confirm(`「${characterLabel(c)}」を削除しますか？公演日程の選択からも外れます。`))return;saveCharacters(loadCharacters().filter(x=>x.id!==c.id));savePerformances(loadPerformances().map(p=>({...p,dates:p.dates.map(d=>({...d,characterIds:(d.characterIds||[]).filter(x=>x!==c.id),guestCharacterIds:(d.guestCharacterIds||[]).filter(x=>x!==c.id)}))})));render()}));
+  root.querySelectorAll(".character-delete").forEach(b=>b.addEventListener("click",()=>{const c=chars.find(x=>x.id===b.dataset.id);if(!c)return;if(!confirm(`「${characterLabel(c)}」を削除しますか？公演日程の選択からも外れます。`))return;saveCharacters(loadCharacters().filter(x=>x.id!==c.id));savePerformances(loadPerformances().map(p=>({...p,tagDefinitions:Object.fromEntries(Object.entries(p.tagDefinitions||{}).map(([tag,meta])=>[tag,{...meta,characterIds:(meta.characterIds||[]).filter(x=>x!==c.id)}])),dates:p.dates.map(d=>({...d,characterIds:(d.characterIds||[]).filter(x=>x!==c.id),guestCharacterIds:(d.guestCharacterIds||[]).filter(x=>x!==c.id)}))})));render()}));
  }
  function fill(c){
   editingId=c?.id||"";
   document.getElementById("characterName").value=c?.name||"";
   document.getElementById("characterDisplayName").value=c?.displayName||"";
-  document.getElementById("actorName").value=c?.actorName||"";
   setColor(characterColor(c||{}));
   document.getElementById("saveCharacter").textContent=c?"変更を保存":"キャラクターを登録";
  }
  document.getElementById("characterForm").addEventListener("submit",e=>{e.preventDefault();
-  const name=document.getElementById("characterName").value.trim(),displayName=document.getElementById("characterDisplayName").value.trim(),actorName=document.getElementById("actorName").value.trim(),color=document.getElementById("characterColor").value;
-  if(!name)return;const chars=loadCharacters(),item={id:editingId||("c_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,6)),name,displayName:displayName||name,color,actorName};
+  const name=document.getElementById("characterName").value.trim(),displayName=document.getElementById("characterDisplayName").value.trim(),color=document.getElementById("characterColor").value;
+  if(!name)return;const chars=loadCharacters(),item={id:editingId||("c_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,6)),name,displayName:displayName||name,color};
   saveCharacters(editingId?chars.map(c=>c.id===editingId?item:c):[...chars,item]);fill(null);render();
  });
  document.getElementById("resetCharacter").addEventListener("click",()=>fill(null));
