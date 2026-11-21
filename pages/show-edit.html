@@ -14,7 +14,7 @@
 <div class="field full"><span>公演期間</span><div class="field-row"><input id="periodStart" type="date" aria-label="公演開始日"><span>〜</span><input id="periodEnd" type="date" aria-label="公演終了日"></div></div>
 <div class="field full"><span>公演カラー</span><div class="color-picker-panel"><div class="color-palette" id="performancePalette"></div><details class="custom-color-details"><summary>カスタムカラー</summary><label class="hex-color-field"><span>カラーコード</span><input id="themeColor" type="text" value="#D8C5E8" maxlength="7"></label></details><div class="character-color-preview" id="performanceColorPreview"><span class="preview-color-dot"></span><div><strong>公演カラー</strong><small>カレンダー・公演一覧に反映</small></div><code id="performanceColorCode">#D8C5E8</code></div></div></div>
 <div class="field full"><div class="subheading-row"><h3>出演キャラクター</h3><a class="btn" href="settings.html">キャラクター辞典を管理</a></div><p class="help-text">この公演に出演するキャラクターを選択します。ゲスト出演も公演単位で設定できます。</p><div id="performanceCastPicker" class="character-picker"></div></div>
-<div class="field full"><h3>タグカラー</h3><p class="help-text">この公演で使うタグの色を設定します。</p><div id="performanceTagColors" class="tag-color-manager"></div></div>
+<div class="field full"><h3>タグ管理</h3><p class="help-text">タグ名・色・紐付けるキャラクターを公演ごとに設定します。日程ではタグを選ぶだけで、キャラクターが目印として表示されます。</p><div id="performanceTagColors" class="tag-color-manager"></div></div>
 
 <label class="field full"><span>公演全体のメモ</span><textarea id="memo" rows="3" placeholder="出演者、記念日、注意事項など"></textarea></label>
 <div class="field full"><div class="subheading-row"><h3>公演日程</h3><button type="button" class="btn" id="addDateRow">＋ 日程を追加</button></div><div id="dateRows" class="date-rows"></div></div>
