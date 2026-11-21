@@ -379,3 +379,20 @@ button { font: inherit; }
 
 .detail-cast { margin:14px 0; padding:12px 0; border-top:1px solid var(--line); }
 .detail-cast > strong { font-size:.8rem; }
+
+
+/* Per-show tag definitions */
+.tag-definition-card{border:1px solid var(--line);border-radius:13px;padding:12px;background:#fffefa;display:grid;gap:10px;margin-top:9px}
+.tag-definition-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.tag-definition-head .tag-color-chip{flex:1 1 120px}
+.tag-definition-color{width:34px;height:30px;border:0;padding:0;background:transparent}
+.tag-character-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tag-character-links>small{width:100%;color:var(--muted);font-size:.72rem}
+.tag-character-option{display:inline-flex;align-items:center;gap:5px;font-size:.75rem}
+.tag-character-option input{accent-color:#88769e}
+.tag-create{display:flex;gap:8px;align-items:center}
+.tag-create input{min-width:0;flex:1}
+.tag-picker{display:flex;flex-wrap:wrap;gap:7px}
+.tag-choice{border-color:color-mix(in srgb,var(--tag-color,#ddd5e8) 70%,#fff)}
+.tag-color-manager{display:block}
+.tag-definition-card{width:100%}
